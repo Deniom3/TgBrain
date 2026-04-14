@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ============================================================================
+# post-commit hook — Автоматическая публикация в публичный GitHub
+# ============================================================================
+# Запускается после каждого коммита на ветке main.
+# Отключить: export SKIP_PUBLISH=1
+# ============================================================================
+
+# Отключить публикацию
+[[ -z "${SKIP_PUBLISH:-}" ]] || exit 0
+
+# Работаем только на main
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" || exit 0
+[[ "$BRANCH" == "main" ]] || exit 0
+
+# Проверяем что remote public существует
+git remote get-url public >/dev/null 2>&1 || exit 0
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
+echo ""
+echo "[publish-public] Auto-publishing after commit on main..."
+echo ""
+
+# Запускаем публикацию (не блокируем коммит при ошибке)
+bash "$REPO_ROOT/scripts/publish-public.sh" 2>&1 || {
+    echo ""
+    echo "[publish-public] WARNING: Auto-publish failed. Run manually:"
+    echo "  bash scripts/publish-public.sh"
+    echo ""
+}

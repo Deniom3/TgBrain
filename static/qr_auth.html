@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация через Telegram</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 24px; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+        .qr-container { margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; }
+        #qr-image { max-width: 250px; width: 100%; border-radius: 8px; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 14px; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.expired { background: #f5c6cb; color: #721c24; }
+        .instructions { margin-top: 20px; text-align: left; font-size: 13px; color: #555; }
+        .instructions ol { margin-left: 20px; }
+        .instructions li { margin-bottom: 8px; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(220,53,69,0.4); }
+        .user-info { margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; }
+        .user-info h3 { color: #2e7d32; margin-bottom: 10px; }
+        .user-info p { margin: 5px 0; color: #333; }
+        .refresh-info { margin-top: 15px; font-size: 12px; color: #999; }
+        .blocked-container {
+            padding: 40px 20px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .blocked-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .blocked-container h2 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .blocked-container p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Авторизация через Telegram</h1>
+        <p class="subtitle">Отсканируйте QR код в приложении Telegram</p>
+        
+        <!-- Блокировка при активной сессии -->
+        <div id="blocked-container" class="blocked-container" style="display:none;">
+            <div class="blocked-icon">🔒</div>
+            <h2>Вход выполнен</h2>
+            <p>Авторизация уже выполнена. Для новой авторизации необходимо выйти из текущей сессии.</p>
+            <button id="logout-btn-blocked" class="btn btn-danger">Выйти</button>
+        </div>
+        
+        <div class="qr-container" id="qr-container">
+            <img id="qr-image" src="" alt="QR код" style="display:none;">
+            <div id="loading">Генерация QR кода...</div>
+        </div>
+        <div id="status" class="status pending" style="display:none;"></div>
+        <div class="instructions" id="instructions" style="display:none;">
+            <h3>Как авторизоваться:</h3>
+            <ol>
+                <li>Откройте Telegram на телефоне</li>
+                <li>Перейдите в Настройки → Устройства</li>
+                <li>Нажмите "Подключить устройство"</li>
+                <li>Наведите камеру на QR код</li>
+            </ol>
+        </div>
+        <div id="user-info" class="user-info" style="display:none;"></div>
+        <button id="refresh-btn" class="btn" style="display:none;">Обновить QR код</button>
+        <button id="logout-btn" class="btn btn-danger" style="display:none;">Выйти</button>
+        <p class="refresh-info" id="refresh-info" style="display:none;">
+            QR код обновится через <span id="countdown">300</span> секунд
+        </p>
+    </div>
+    <script>
+        let currentSessionId = null;
+        let statusCheckInterval = null;
+        let countdownInterval = null;
+        const API_BASE = '/api/v1/settings';
+        let isBlocked = false;
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionName = urlParams.get('session');
+
+            if (sessionName) {
+                const sessionId = sessionName.replace(/^qr_auth_/, '');
+                currentSessionId = sessionId;
+                displayQRCode('');
+                showInstructions();
+                showStatus('Подключение к существующей сессии...', 'pending');
+                startStatusCheck();
+                return;
+            }
+
+            const authStatus = await checkAuthStatus();
+
+            if (authStatus.is_authenticated) {
+                showBlockedState();
+                return;
+            }
+
+            await createQRSession();
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(API_BASE + '/telegram/auth-status');
+                return await response.json();
+            } catch (error) {
+                console.error('Ошибка проверки статуса авторизации:', error);
+                return { is_authenticated: false, is_session_active: false, can_authorize: true };
+            }
+        }
+
+        async function createQRSession() {
+            try {
+                const response = await fetch(API_BASE + '/telegram/qr-code', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' } 
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 409) {
+                        showBlockedState();
+                        return;
+                    }
+                    throw new Error('Ошибка создания QR кода');
+                }
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                displayQRCode(data.qr_code_data);
+                showInstructions();
+                startStatusCheck();
+                startCountdown(data.expires_in);
+            } catch (error) {
+                showError('Не удалось создать QR код: ' + error.message);
+            }
+        }
+
+        function showBlockedState() {
+            isBlocked = true;
+            document.getElementById('blocked-container').style.display = 'block';
+            document.getElementById('qr-container').style.display = 'none';
+            document.getElementById('subtitle').style.display = 'none';
+        }
+
+        function displayQRCode(qrData) {
+            const qrImage = document.getElementById('qr-image');
+            qrImage.src = qrData;
+            qrImage.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showInstructions() { document.getElementById('instructions').style.display = 'block'; }
+
+        async function checkStatus() {
+            if (!currentSessionId) return;
+            try {
+                const response = await fetch(API_BASE + '/telegram/qr-status/' + currentSessionId);
+                const data = await response.json();
+                if (data.exists) {
+                    if (data.is_completed) { handleSuccess(data); }
+                    else if (data.is_expired) { handleExpired(); }
+                    else { showStatus('Ожидание сканирования...', 'pending'); }
+                } else { showError(data.error || 'Сессия не найдена'); }
+            } catch (error) { console.error('Ошибка проверки статуса:', error); }
+        }
+
+        function handleSuccess(data) {
+            stopStatusCheck(); stopCountdown();
+            var userInfo = document.getElementById('user-info');
+            userInfo.innerHTML = '<h3>✅ Успешно!</h3>';
+            var idP = document.createElement('p');
+            var idStrong = document.createElement('strong');
+            idStrong.textContent = 'ID: ';
+            idP.appendChild(idStrong);
+            idP.appendChild(document.createTextNode(String(data.user_id)));
+            userInfo.appendChild(idP);
+            var nameP = document.createElement('p');
+            var nameStrong = document.createElement('strong');
+            nameStrong.textContent = 'Имя: ';
+            nameP.appendChild(nameStrong);
+            nameP.appendChild(document.createTextNode(data.user_username || 'Не указано'));
+            userInfo.appendChild(nameP);
+            userInfo.style.display = 'block';
+            showStatus('Авторизация успешна!', 'success');
+            document.getElementById('logout-btn').style.display = 'inline-block';
+            document.getElementById('refresh-btn').style.display = 'none';
+        }
+
+        function handleExpired() {
+            stopStatusCheck(); stopCountdown();
+            showStatus('Сессия истекла. Создайте новый QR код.', 'expired');
+            document.getElementById('refresh-btn').style.display = 'inline-block';
+        }
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+            statusEl.style.display = 'block';
+        }
+
+        function showError(message) { showStatus(message, 'error'); stopStatusCheck(); }
+
+        function startStatusCheck() { checkStatus(); statusCheckInterval = setInterval(checkStatus, 3000); }
+        function stopStatusCheck() { if (statusCheckInterval) { clearInterval(statusCheckInterval); statusCheckInterval = null; } }
+
+        function startCountdown(initialSeconds) {
+            const countdownEl = document.getElementById('countdown');
+            const refreshInfo = document.getElementById('refresh-info');
+            refreshInfo.style.display = 'block';
+            let remaining = initialSeconds;
+            countdownEl.textContent = remaining;
+            countdownInterval = setInterval(function() {
+                remaining--;
+                countdownEl.textContent = remaining;
+                if (remaining <= 0) { stopCountdown(); handleExpired(); }
+            }, 1000);
+        }
+
+        function stopCountdown() { if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; } }
+
+        async function performLogout() {
+            if (!confirm('Вы уверены, что хотите выйти? Текущая сессия будет сброшена.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_BASE + '/telegram/logout', { method: 'POST' });
+                if (response.ok) {
+                    // Перезагружаем страницу для новой авторизации
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка выхода: ' + (error.detail || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка выхода: ' + error.message);
+            }
+        }
+
+        // Обработчики кнопок выхода
+        document.getElementById('logout-btn-blocked').addEventListener('click', performLogout);
+        document.getElementById('logout-btn').addEventListener('click', performLogout);
+
+        document.getElementById('refresh-btn').addEventListener('click', async function() {
+            if (currentSessionId) {
+                try { await fetch(API_BASE + '/telegram/qr-cancel/' + currentSessionId, { method: 'POST' }); } catch (e) { console.error('Ошибка отмены:', e); }
+            }
+            stopStatusCheck(); stopCountdown();
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('qr-image').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('refresh-btn').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'none';
+            document.getElementById('refresh-info').style.display = 'none';
+            await createQRSession();
+        });
+
+        init();
+    </script>
+</body>
+</html>

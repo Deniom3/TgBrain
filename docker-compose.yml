@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: tg-knowledge-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-tg_db}
+    volumes:
+      - tg-knowledge-db-data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - tg-network
+
+  tg-knowledge:
+    build: .
+    container_name: tg-knowledge
+    env_file:
+      - .env
+    environment:
+      DB_HOST: tg-knowledge-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-tg_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - tg-network
+
+volumes:
+  tg-knowledge-db-data:
+    name: telegramsummarizer_tg-knowledge-db-data
+  tg-knowledge-data:
+    name: telegramsummarizer_tg-knowledge-data
+
+networks:
+  tg-network:
+    driver: bridge
