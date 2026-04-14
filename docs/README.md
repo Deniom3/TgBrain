@@ -1,6 +1,6 @@
 # TgBrain Documentation
 
-Version: 1.0.1
+Version: 1.0.0
 Date: April 2026
 
 Languages: [English](README.md) | [Русский](README_ru.md)
