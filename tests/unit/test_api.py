@@ -9,7 +9,7 @@ def test_root_endpoint(test_client):
     assert response.status_code == 200
     data = response.json()
     assert "name" in data
-    assert "Telegram" in data["name"]
+    assert data["name"] == "TgBrain API"
 
 
 def test_health_endpoint(test_client):

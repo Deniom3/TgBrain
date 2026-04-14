@@ -441,6 +441,7 @@ class TestSendWebhookAfterGeneration:
         self, summary_webhook_service: SummaryWebhookService,
     ) -> None:
         """Фоновая отправка webhook вызывает send_webhook_for_summary."""
+        summary_webhook_service._summary_repo = AsyncMock()
         with patch.object(
             summary_webhook_service,
             "send_webhook_for_summary",

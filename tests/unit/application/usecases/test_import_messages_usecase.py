@@ -254,7 +254,7 @@ class TestStartImportTooManyMessagesFromFile:
     @pytest.mark.asyncio
     async def test_start_import_too_many_messages_raises_error(self) -> None:
         file_storage = MockFileStoragePort()
-        too_many = ValidationResult(messages_count=15000)
+        too_many = ValidationResult(messages_count=250000)
         file_validation = MockFileValidationPort(validation_result=too_many)
         chat_access = MockChatAccessValidationPort()
         message_ingestion = MockMessageIngestionPort()
