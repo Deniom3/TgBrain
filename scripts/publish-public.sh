@@ -48,6 +48,9 @@ for item in "${FORBIDDEN_FILES[@]}"; do
     log "  ✗ $item"
 done
 
+# Сохраняем URL GitHub до входа в bare-клон
+GITHUB_URL=$(git remote get-url "$PUBLIC_REMOTE")
+
 # ---------- фильтр через bare-репозиторий ----------
 log "Creating temporary bare clone..."
 git clone --bare "$REPO_ROOT" "$TEMP_DIR/filter.git"
@@ -93,7 +96,6 @@ done
 [[ $HISTORY_LEAK -eq 0 ]] || die "History contains forbidden files — aborting push"
 
 # ---------- пуш ----------
-GITHUB_URL=$(git remote get-url "$PUBLIC_REMOTE")
 log "Pushing cleaned history to $PUBLIC_REMOTE::$TARGET_BRANCH..."
 cd "$TEMP_DIR/filter.git"
 git push --force "$GITHUB_URL" "refs/heads/main:$TARGET_BRANCH"
