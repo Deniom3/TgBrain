@@ -1,11 +1,5 @@
 """Тесты для documentation viewer endpoints."""
 
-import asyncio
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import patch
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
