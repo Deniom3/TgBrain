@@ -1,0 +1,57 @@
+# Telegram API
+telethon>=1.25.0
+
+# QR код генерация
+qrcode[pil]>=7.0.0
+
+# HTTP клиенты для API запросов
+aiohttp>=3.9.0
+httpx>=0.25.0
+
+# Rate limiter для webhook
+aiolimiter>=1.1.0
+
+# Асинхронное чтение файлов
+aiofiles>=23.0.0
+
+# Streaming JSON parser для больших файлов
+ijson>=3.2.0
+
+# PostgreSQL драйвер
+asyncpg>=0.29.0
+
+# Конфигурация и валидация
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# Шаблоны для промптов
+jinja2>=3.1.0
+
+# FastAPI и сервер
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Шифрование данных сессии
+cryptography>=41.0.0
+
+# Тестирование
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-timeout==2.4.0
+pytest-xdist==3.5.0
+respx>=0.20.0
+
+# Import linting
+import-linter>=1.4.0
+
+# Timezone data (required for zoneinfo on Windows/Docker)
+tzdata>=2024.1
+
+# HTTP client for scripts and tests
+requests>=2.33.0
+
+# Type stubs
+types-aiofiles==25.1.0.20251011
+types-requests

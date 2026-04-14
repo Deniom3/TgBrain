@@ -1,0 +1,293 @@
+"""
+Модели данных и SQL запросы для TgBrain.
+
+Импортирует все модели и SQL запросы для обратной совместимости.
+
+Пример использования:
+    from src.models import Chat, Message, TelegramAuth
+    from src.models import SQL_INSERT_MESSAGE, SQL_GET_ACTIVE_CHATS
+"""
+
+# Модели данных
+from src.models.data_models import (
+    AppSetting,
+    Chat,
+    ChatSetting,
+    ChatSummary,
+    EmbeddingProvider,
+    LLMProvider,
+    Message,
+    MessageGroup,
+    MergedResult,
+    MessageRecord,
+    PendingMessage,
+    ReindexSettings,
+    ReindexTask,
+    SummaryRecord,
+    SummaryStatus,
+)
+
+# TelegramAuth импортируется из domain модели
+from src.domain.models.auth import TelegramAuth
+
+# Value Objects импортируются из domain
+from src.domain.value_objects import (
+    ApiId,
+    ApiHash,
+    PhoneNumber,
+    SessionName,
+    MessageText,
+    SenderName,
+    ChatTitle,
+)
+
+# Мапперы для конвертации между слоями
+from src.common.mappers import (
+    from_data_model,
+    from_domain,
+    to_data_model,
+    to_domain,
+)
+
+# SQL запросы (импортируем из sql модуля)
+from src.models.sql.auth import (
+    SQL_GET_TELEGRAM_AUTH,
+    SQL_UPSERT_TELEGRAM_AUTH,
+)
+from src.models.sql.chats import (
+    SQL_BULK_UPSERT_CHAT_SETTINGS,
+    SQL_DISABLE_CHAT_BY_ID,
+    SQL_ENABLE_CHAT_BY_ID,
+    SQL_GET_ACTIVE_CHATS,
+    SQL_GET_CHAT,
+    SQL_GET_CHAT_SETTINGS_BY_ID,
+    SQL_GET_MONITORED_CHATS,
+    SQL_INSERT_CHAT,
+    SQL_INSERT_CHAT_SETTING_SINGLE,
+    SQL_TOGGLE_CHAT_MONITORING,
+    SQL_UPDATE_CHAT_LAST_MESSAGE,
+    SQL_UPDATE_CHAT_MONITORING,
+    # Summary Settings
+    SQL_CLEAR_CUSTOM_PROMPT,
+    SQL_CLEAR_SUMMARY_SCHEDULE,
+    SQL_DISABLE_SUMMARY,
+    SQL_ENABLE_SUMMARY,
+    SQL_GET_CUSTOM_PROMPT,
+    SQL_GET_SUMMARY_SETTINGS,
+    SQL_SET_CUSTOM_PROMPT,
+    SQL_SET_SUMMARY_PERIOD,
+    SQL_SET_SUMMARY_SCHEDULE,
+    SQL_TOGGLE_SUMMARY,
+    SQL_SET_WEBHOOK_CONFIG,
+    SQL_GET_WEBHOOK_CONFIG,
+    SQL_DISABLE_WEBHOOK,
+)
+from src.models.sql.messages import (
+    SQL_CHECK_CHAT_EXISTS,
+    SQL_DELETE_OLD_MESSAGES,
+    SQL_GET_CONSECUTIVE_MESSAGES,
+    SQL_GET_EMBEDDING_MODEL_STATS,
+    SQL_GET_MESSAGES_BY_CHAT_ID,
+    SQL_GET_MESSAGES_COUNT_FOR_REINDEX,
+    SQL_GET_MESSAGES_FOR_REINDEX,
+    SQL_GET_MESSAGES_IN_TIME_WINDOW,
+    SQL_GET_MESSAGE_NEIGHBORS,
+    SQL_GET_UNPROCESSED_MESSAGES,
+    SQL_INSERT_MESSAGE,
+    SQL_INSERT_MESSAGE_WITH_EMBEDDING,
+    SQL_UPDATE_MESSAGE_EMBEDDING,
+    SQL_UPDATE_MESSAGE_EMBEDDING_WITH_MODEL,
+)
+from src.models.sql.pending_messages import (
+    SQL_DELETE_PENDING,
+    SQL_GET_PENDING,
+    SQL_INSERT_PENDING,
+    SQL_UPDATE_PENDING_RETRY,
+)
+from src.models.sql.providers import (
+    SQL_DELETE_EMBEDDING_PROVIDER,
+    SQL_DELETE_LLM_PROVIDER,
+    SQL_GET_ACTIVE_EMBEDDING_PROVIDER,
+    SQL_GET_ACTIVE_LLM_PROVIDER,
+    SQL_GET_ALL_EMBEDDING_PROVIDERS,
+    SQL_GET_ALL_LLM_PROVIDERS,
+    SQL_GET_EMBEDDING_PROVIDER,
+    SQL_GET_LLM_PROVIDER,
+    SQL_INSERT_EMBEDDING_PROVIDER,
+    SQL_INSERT_LLM_PROVIDER,
+    SQL_SET_ACTIVE_EMBEDDING_PROVIDER,
+    SQL_SET_ACTIVE_PROVIDER,
+    SQL_UPDATE_EMBEDDING_PROVIDER,
+    SQL_UPDATE_LLM_PROVIDER,
+)
+from src.models.sql.reindex import (
+    SQL_GET_REINDEX_SETTING,
+    SQL_GET_REINDEX_TASK,
+    SQL_GET_REINDEX_TASK_HISTORY,
+    SQL_INSERT_REINDEX_SETTING,
+    SQL_INSERT_REINDEX_TASK,
+    SQL_SET_LAST_REINDEX_MODEL,
+    SQL_UPDATE_REINDEX_SETTING,
+    SQL_UPDATE_REINDEX_TASK,
+)
+from src.models.sql.settings import (
+    SQL_DELETE_APP_SETTING,
+    SQL_DELETE_CHAT_SETTING,
+    SQL_GET_ALL_APP_SETTINGS,
+    SQL_GET_ALL_CHAT_SETTINGS,
+    SQL_GET_APP_SETTING,
+    SQL_GET_CHAT_SETTING,
+    SQL_INSERT_APP_SETTING,
+    SQL_INSERT_APP_SETTING_IF_NOT_EXISTS,
+    SQL_INSERT_CHAT_SETTING,
+    SQL_UPDATE_APP_SETTING,
+    SQL_UPDATE_CHAT_SETTING,
+)
+from src.models.sql.tables import (
+    SQL_CREATE_APP_SETTINGS,
+    SQL_CREATE_CHAT_SETTINGS,
+    SQL_CREATE_CHAT_SUMMARIES,
+    SQL_CREATE_CHAT_SUMMARIES_INDICES,
+    SQL_CREATE_EMBEDDING_PROVIDERS,
+    SQL_CREATE_INDICES,
+    SQL_CREATE_LLM_PROVIDERS,
+    SQL_CREATE_MESSAGES,
+    SQL_CREATE_PENDING_MESSAGES,
+    SQL_CREATE_REINDEX_SETTINGS,
+    SQL_CREATE_REINDEX_TASKS,
+    SQL_CREATE_TELEGRAM_AUTH,
+)
+
+__all__ = [
+    # Мапперы
+    "from_data_model",
+    "from_domain",
+    "to_data_model",
+    "to_domain",
+    # Models
+    "Chat",
+    "Message",
+    "PendingMessage",
+    "TelegramAuth",
+    "ChatSetting",
+    "LLMProvider",
+    "EmbeddingProvider",
+    "AppSetting",
+    "ReindexSettings",
+    "ReindexTask",
+    "ChatSummary",
+    "SummaryStatus",
+    # Value Objects
+    "ApiId",
+    "ApiHash",
+    "PhoneNumber",
+    "SessionName",
+    "MessageText",
+    "SenderName",
+    "ChatTitle",
+    # RAG Search Models
+    "MessageRecord",
+    "SummaryRecord",
+    "MergedResult",
+    "MessageGroup",
+    # SQL Tables
+    "SQL_CREATE_MESSAGES",
+    "SQL_CREATE_PENDING_MESSAGES",
+    "SQL_CREATE_INDICES",
+    "SQL_CREATE_TELEGRAM_AUTH",
+    "SQL_CREATE_CHAT_SETTINGS",
+    "SQL_CREATE_LLM_PROVIDERS",
+    "SQL_CREATE_EMBEDDING_PROVIDERS",
+    "SQL_CREATE_APP_SETTINGS",
+    "SQL_CREATE_REINDEX_SETTINGS",
+    "SQL_CREATE_REINDEX_TASKS",
+    "SQL_CREATE_CHAT_SUMMARIES",
+    "SQL_CREATE_CHAT_SUMMARIES_INDICES",
+    # SQL Chats
+    "SQL_INSERT_CHAT",
+    "SQL_GET_CHAT",
+    "SQL_GET_ACTIVE_CHATS",
+    "SQL_UPDATE_CHAT_LAST_MESSAGE",
+    "SQL_BULK_UPSERT_CHAT_SETTINGS",
+    "SQL_GET_MONITORED_CHATS",
+    "SQL_GET_CHAT_SETTINGS_BY_ID",
+    "SQL_UPDATE_CHAT_MONITORING",
+    "SQL_TOGGLE_CHAT_MONITORING",
+    "SQL_INSERT_CHAT_SETTING_SINGLE",
+    "SQL_ENABLE_CHAT_BY_ID",
+    "SQL_DISABLE_CHAT_BY_ID",
+    # SQL Summary Settings
+    "SQL_ENABLE_SUMMARY",
+    "SQL_DISABLE_SUMMARY",
+    "SQL_TOGGLE_SUMMARY",
+    "SQL_SET_SUMMARY_PERIOD",
+    "SQL_SET_SUMMARY_SCHEDULE",
+    "SQL_CLEAR_SUMMARY_SCHEDULE",
+    "SQL_GET_SUMMARY_SETTINGS",
+    "SQL_GET_CUSTOM_PROMPT",
+    "SQL_SET_CUSTOM_PROMPT",
+    "SQL_CLEAR_CUSTOM_PROMPT",
+    "SQL_SET_WEBHOOK_CONFIG",
+    "SQL_GET_WEBHOOK_CONFIG",
+    "SQL_DISABLE_WEBHOOK",
+    # SQL Messages
+    "SQL_INSERT_MESSAGE",
+    "SQL_INSERT_MESSAGE_WITH_EMBEDDING",
+    "SQL_GET_UNPROCESSED_MESSAGES",
+    "SQL_GET_MESSAGES_BY_CHAT_ID",
+    "SQL_UPDATE_MESSAGE_EMBEDDING",
+    "SQL_UPDATE_MESSAGE_EMBEDDING_WITH_MODEL",
+    "SQL_DELETE_OLD_MESSAGES",
+    "SQL_GET_MESSAGES_FOR_REINDEX",
+    "SQL_GET_MESSAGES_COUNT_FOR_REINDEX",
+    "SQL_GET_EMBEDDING_MODEL_STATS",
+    # SQL RAG Search
+    "SQL_GET_MESSAGE_NEIGHBORS",
+    "SQL_GET_CONSECUTIVE_MESSAGES",
+    "SQL_GET_MESSAGES_IN_TIME_WINDOW",
+    "SQL_CHECK_CHAT_EXISTS",
+    # SQL Pending Messages
+    "SQL_INSERT_PENDING",
+    "SQL_GET_PENDING",
+    "SQL_UPDATE_PENDING_RETRY",
+    "SQL_DELETE_PENDING",
+    # SQL Auth
+    "SQL_UPSERT_TELEGRAM_AUTH",
+    "SQL_GET_TELEGRAM_AUTH",
+    # SQL Settings
+    "SQL_INSERT_CHAT_SETTING",
+    "SQL_GET_CHAT_SETTING",
+    "SQL_GET_ALL_CHAT_SETTINGS",
+    "SQL_UPDATE_CHAT_SETTING",
+    "SQL_DELETE_CHAT_SETTING",
+    "SQL_INSERT_APP_SETTING",
+    "SQL_INSERT_APP_SETTING_IF_NOT_EXISTS",
+    "SQL_GET_APP_SETTING",
+    "SQL_GET_ALL_APP_SETTINGS",
+    "SQL_UPDATE_APP_SETTING",
+    "SQL_DELETE_APP_SETTING",
+    # SQL Providers
+    "SQL_INSERT_LLM_PROVIDER",
+    "SQL_GET_LLM_PROVIDER",
+    "SQL_GET_ALL_LLM_PROVIDERS",
+    "SQL_GET_ACTIVE_LLM_PROVIDER",
+    "SQL_UPDATE_LLM_PROVIDER",
+    "SQL_SET_ACTIVE_PROVIDER",
+    "SQL_DELETE_LLM_PROVIDER",
+    "SQL_INSERT_EMBEDDING_PROVIDER",
+    "SQL_GET_EMBEDDING_PROVIDER",
+    "SQL_GET_ALL_EMBEDDING_PROVIDERS",
+    "SQL_GET_ACTIVE_EMBEDDING_PROVIDER",
+    "SQL_UPDATE_EMBEDDING_PROVIDER",
+    "SQL_SET_ACTIVE_EMBEDDING_PROVIDER",
+    "SQL_DELETE_EMBEDDING_PROVIDER",
+    # SQL Reindex
+    "SQL_INSERT_REINDEX_SETTING",
+    "SQL_GET_REINDEX_SETTING",
+    "SQL_UPDATE_REINDEX_SETTING",
+    "SQL_SET_LAST_REINDEX_MODEL",
+    "SQL_INSERT_REINDEX_TASK",
+    "SQL_UPDATE_REINDEX_TASK",
+    "SQL_GET_REINDEX_TASK",
+    "SQL_GET_REINDEX_TASK_HISTORY",
+]

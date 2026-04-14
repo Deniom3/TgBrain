@@ -1,0 +1,77 @@
+# Docker Compose для ТЕСТИРОВАНИЯ
+# Использует отдельную тестовую БД (tg_db_test)
+# 
+# Использование:
+#   docker-compose -f docker-compose.test.yml up --build
+#   docker-compose -f docker-compose.test.yml run --rm tg-knowledge-test
+#
+
+version: '3.8'
+
+services:
+  # Тестовая база данных
+  postgres-test:
+    image: pgvector/pgvector:pg17
+    container_name: tg-knowledge-test-db
+    environment:
+      POSTGRES_DB: tg_db_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test_password_123
+    volumes:
+      - ./data/postgres-test:/var/lib/postgresql/data
+    networks:
+      - tg-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tg_db_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"  # Порт 5433 чтобы не конфликтовал с основной БД
+
+  # Тестовое приложение
+  tg-knowledge-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tg-knowledge-test
+    environment:
+      # Тестовая БД
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      DB_NAME: tg_db_test
+      DB_USER: postgres
+      DB_PASSWORD: test_password_123
+      
+      # Telegram API (из основной .env)
+      TG_API_ID: ${TG_API_ID}
+      TG_API_HASH: ${TG_API_HASH}
+      
+      # Embeddings (Ollama)
+      OLLAMA_EMBEDDING_PROVIDER: ollama
+      OLLAMA_EMBEDDING_URL: ${OLLAMA_EMBEDDING_URL:-http://host.docker.internal:11434}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-bge-m3:latest}
+      
+      # LLM Provider
+      LLM_ACTIVE_PROVIDER: ${LLM_ACTIVE_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      
+      # Application
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Тестовые настройки
+      TEST_MODE: "true"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - tg-test-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "python scripts/utility/test_session_recovery.py"
+
+networks:
+  tg-test-network:
+    driver: bridge

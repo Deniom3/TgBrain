@@ -1,0 +1,74 @@
+# Виртуальное окружение
+venv/
+.venv/
+ENV/
+env/
+
+# Python
+__pycache__/
+.mypy_cache/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+
+# Чувствительные данные
+.env
+.env.local
+example/
+
+# Результаты работы
+results/
+messages.json
+messages.state.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# DOC (игнорируем только временные директории)
+#docs/97-plans/*/rev/
+#docs/97-plans/*/reports/
+#docs/98-reports/
+
+# AI
+.qwen/settings.json
+.kilocode/
+.opencode
+.qwen/
+nul
+
+# Commit message draft
+.commit_msg.txt
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Временные файлы
+test_output.txt
+uploads/
+
+# Публикация (фильтр-лист не попадает в публичный репозиторий)
+.publish-filter-list

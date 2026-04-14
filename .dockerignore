@@ -1,0 +1,30 @@
+# Исключить чувствительные директории из контекста сборки Docker
+docs/98-reports
+docs/99-archive
+docs/99-testing
+docs/96-research
+docs/97-plans
+
+# Не включать в образ
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info
+dist
+build
+.env
+.env.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

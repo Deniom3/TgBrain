@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Knowledge Base — Documentation</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown-light.min.css"
+          id="md-css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.6/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.7/dist/purify.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #f0f2f5;
+            --bg-sidebar: #ffffff;
+            --bg-content: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #374151;
+            --text-muted: #4b5563;
+            --border-color: #d0d7de;
+            --link-color: #1e40af;
+            --link-active-bg: #dbeafe;
+            --link-active-text: #1e3a8a;
+            --link-hover-bg: #eff6ff;
+            --code-bg: #f3f4f6;
+            --code-text: #111827;
+            --pre-bg: #1e293b;
+            --pre-text: #e2e8f0;
+            --lang-switcher-bg: #e8eaed;
+            --lang-btn-text: #4a5568;
+            --lang-btn-active-bg: #ffffff;
+            --lang-btn-active-text: #0969da;
+            --heading-color: #111827;
+            --blockquote-color: #4b5563;
+            --blockquote-border: #d1d5db;
+            --table-border: #d1d5db;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --icon-sun: '☀️';
+            --icon-moon: '🌙';
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0d1117;
+            --bg-sidebar: #161b22;
+            --bg-content: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border-color: #30363d;
+            --link-color: #58a6ff;
+            --link-active-bg: #1f2937;
+            --link-active-text: #79c0ff;
+            --link-hover-bg: #1c2333;
+            --code-bg: #1c2128;
+            --code-text: #e6edf3;
+            --pre-bg: #1c2128;
+            --pre-text: #e6edf3;
+            --lang-switcher-bg: #21262d;
+            --lang-btn-text: #8b949e;
+            --lang-btn-active-bg: #30363d;
+            --lang-btn-active-text: #58a6ff;
+            --heading-color: #f0f6fc;
+            --blockquote-color: #8b949e;
+            --blockquote-border: #3b434b;
+            --table-border: #30363d;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .layout { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 300px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            padding: 16px;
+            overflow-y: auto;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .controls {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .controls-row:last-child { margin-bottom: 12px; }
+
+        .ctrl-btn {
+            flex: 1;
+            padding: 6px 8px;
+            border: none;
+            background: var(--lang-switcher-bg);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--lang-btn-text);
+            transition: all 0.2s;
+        }
+
+        .ctrl-btn.active {
+            background: var(--lang-btn-active-bg);
+            color: var(--lang-btn-active-text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+
+        .theme-btn {
+            flex: 1;
+            padding: 6px 8px;
+            border: none;
+            background: var(--lang-switcher-bg);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--lang-btn-text);
+            transition: all 0.2s;
+            line-height: 1.4;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-btn:hover {
+            background: var(--link-hover-bg);
+        }
+
+        .sidebar h2 {
+            font-size: 13px;
+            margin: 16px 0 8px 0;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+        }
+
+        .sidebar h2:first-child { margin-top: 8px; }
+
+        .sidebar a {
+            display: block;
+            padding: 5px 10px;
+            color: var(--link-color);
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            margin: 1px 0;
+            font-weight: 500;
+        }
+
+        .sidebar a:hover { background: var(--link-hover-bg); }
+
+        .sidebar a.active {
+            background: var(--link-active-bg);
+            color: var(--link-active-text);
+            font-weight: 700;
+        }
+
+        .sidebar a.hidden { display: none; }
+
+        .sidebar .loading-nav {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        .content {
+            margin-left: 300px;
+            flex: 1;
+            padding: 32px;
+        }
+
+        .markdown-body {
+            max-width: 860px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            color: var(--text-primary);
+        }
+
+        .markdown-body h1, .markdown-body h2, .markdown-body h3,
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            color: var(--heading-color);
+            font-weight: 700;
+        }
+
+        .markdown-body p, .markdown-body li, .markdown-body td, .markdown-body th {
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .markdown-body code {
+            background: var(--code-bg);
+            color: var(--code-text);
+            font-size: 14px;
+        }
+
+        .markdown-body pre {
+            background: var(--pre-bg);
+            color: var(--pre-text);
+            border-radius: 6px;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            color: var(--pre-text);
+        }
+
+        .markdown-body a { color: var(--link-color); }
+        .markdown-body table { border-color: var(--table-border); }
+        .markdown-body thead th {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-color: var(--table-border);
+        }
+        .markdown-body tbody td {
+            background: var(--bg-content);
+            color: var(--text-primary);
+            border-color: var(--table-border);
+        }
+        .markdown-body tbody tr:nth-child(2n) {
+            background: var(--bg-primary);
+        }
+        .markdown-body tbody tr:nth-child(2n) td {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .markdown-body blockquote {
+            color: var(--blockquote-color);
+            border-left-color: var(--blockquote-border);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 100px;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 20px;
+            border-radius: 6px;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .content { margin-left: 0; padding: 16px; }
+            .markdown-body { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="controls">
+                <div class="controls-row">
+                    <button class="ctrl-btn active" data-lang="ru">RU</button>
+                    <button class="ctrl-btn" data-lang="en">EN</button>
+                    <button class="theme-btn" id="theme-toggle" title="Переключить тему">🌙</button>
+                </div>
+            </div>
+            <div id="nav-content"><div class="loading-nav">Loading...</div></div>
+        </nav>
+        <main class="content">
+            <div class="markdown-body" id="content">
+                <div class="loading">Loading documentation...</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        marked.setOptions({ breaks: true });
+
+        let docTree = null;
+        let currentLang = 'ru';
+        let currentTheme = 'light';
+        let currentFile = '';
+
+        function initTheme() {
+            const saved = localStorage.getItem('docs-theme') || 'light';
+            currentTheme = saved;
+            document.documentElement.setAttribute('data-theme', saved);
+            document.getElementById('theme-toggle').textContent = saved === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+
+            const mdCss = document.getElementById('md-css');
+            if (currentTheme === 'dark') {
+                mdCss.href = 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown-dark.min.css';
+            } else {
+                mdCss.href = 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown-light.min.css';
+            }
+
+            document.getElementById('theme-toggle').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('docs-theme', currentTheme);
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        async function loadTree() {
+            try {
+                const resp = await fetch('/docs-api/tree');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                docTree = await resp.json();
+                renderNav();
+            } catch (e) {
+                document.getElementById('nav-content').innerHTML =
+                    `<div class="error">Failed to load navigation: ${e.message}</div>`;
+            }
+        }
+
+        function getAllFiles() {
+            if (!docTree) return [];
+            const all = [...docTree.root_files];
+            docTree.sections.forEach(s => all.push(...s.files));
+            return all;
+        }
+
+        function findCorrespondingFile(file, fromLang, toLang) {
+            if (fromLang === toLang) return file;
+
+            const all = getAllFiles();
+
+            if (toLang === 'en' && file.endsWith('_ru.md')) {
+                const enPath = file.replace('_ru.md', '.md');
+                if (all.find(f => f.path === enPath && f.lang === 'en')) {
+                    return enPath;
+                }
+            } else if (toLang === 'ru' && !file.endsWith('_ru.md')) {
+                const ruPath = file.replace('.md', '_ru.md');
+                if (all.find(f => f.path === ruPath && f.lang === 'ru')) {
+                    return ruPath;
+                }
+            }
+
+            return file;
+        }
+
+        function renderNav() {
+            const nav = document.getElementById('nav-content');
+            const rootFiles = docTree.root_files.filter(f => f.lang === currentLang);
+            const sections = docTree.sections;
+
+            let html = '';
+
+            if (rootFiles.length > 0) {
+                html += `<h2>${currentLang === 'ru' ? 'Документация' : 'Documentation'}</h2>`;
+                rootFiles.forEach(f => {
+                    const active = f.path === currentFile ? ' active' : '';
+                    html += `<a href="#" data-file="${escAttr(f.path)}" data-lang="${f.lang}" class="doc-link${active}">${escHtml(f.title)}</a>`;
+                });
+            }
+
+            sections.forEach(sec => {
+                const files = sec.files.filter(f => f.lang === currentLang);
+                if (files.length === 0) return;
+                const title = currentLang === 'ru' ? sec.title_ru : sec.title_en;
+                html += `<h2>${escHtml(title)}</h2>`;
+                files.forEach(f => {
+                    const active = f.path === currentFile ? ' active' : '';
+                    html += `<a href="#" data-file="${escAttr(f.path)}" data-lang="${f.lang}" class="doc-link${active}">${escHtml(f.title)}</a>`;
+                });
+            });
+
+            html += `<h2>${currentLang === 'ru' ? 'Ссылки' : 'Links'}</h2>`;
+            html += `<a href="/docs" target="_blank">Swagger UI</a>`;
+            html += `<a href="/health">Health Check</a>`;
+
+            nav.innerHTML = html;
+        }
+
+        function escHtml(str) {
+            // Безопасно: textContent автоматически экранирует все спецсимволы
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function escAttr(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        async function loadDoc(file) {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">Loading documentation...</div>';
+
+            try {
+                const response = await fetch(`/docs-api/files/${file}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                content.innerHTML = DOMPurify.sanitize(marked.parse(data.content));
+                currentFile = file;
+
+                document.querySelectorAll('.doc-link').forEach(a => a.classList.remove('active'));
+                const sidebarLink = document.querySelector(`.doc-link[data-file="${escAttr(file)}"]`);
+                if (sidebarLink) sidebarLink.classList.add('active');
+            } catch (error) {
+                content.innerHTML = `<div class="error">Failed to load documentation: ${error.message}</div>`;
+            }
+        }
+
+        function resolveBasePath(file) {
+            const parts = file.split('/');
+            parts.pop();
+            return parts.length > 0 ? parts.join('/') + '/' : '';
+        }
+
+        function normalizePath(path) {
+            const base = resolveBasePath(currentFile);
+            const full = base + path;
+            const parts = full.split('/');
+            const stack = [];
+            for (const part of parts) {
+                if (part === '..') {
+                    if (stack.length > 0) stack.pop();
+                } else if (part !== '.' && part !== '') {
+                    stack.push(part);
+                }
+            }
+            return stack.join('/');
+        }
+
+        function isDocLink(url) {
+            if (!url || url.startsWith('#') || url.startsWith('http://') ||
+                url.startsWith('https://') || url.startsWith('/')) {
+                return false;
+            }
+            try {
+                new URL(url);
+                return false;
+            } catch (e) {}
+            return url.endsWith('.md') || url.endsWith('.md/');
+        }
+
+        function findDocInTree(path) {
+            if (!docTree) return path;
+
+            const all = getAllFiles();
+
+            const exact = all.find(f => f.path === path);
+            if (exact) return exact.path;
+
+            if (path.endsWith('_ru.md')) {
+                const enPath = path.replace('_ru.md', '.md');
+                const en = all.find(f => f.path === enPath && f.lang === 'en');
+                if (en) return enPath;
+            }
+
+            if (path.endsWith('.md') && !path.endsWith('_ru.md')) {
+                const ruPath = path.replace('.md', '_ru.md');
+                const ru = all.find(f => f.path === ruPath && f.lang === 'ru');
+                if (ru) return ruPath;
+            }
+
+            return path;
+        }
+
+        // Event delegation for content area (markdown links)
+        document.getElementById('content').addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+
+            const href = link.getAttribute('href');
+            if (!isDocLink(href)) return;
+
+            e.preventDefault();
+
+            let resolved = normalizePath(href);
+            resolved = findDocInTree(resolved);
+
+            loadDoc(resolved);
+            history.pushState({file: resolved, lang: currentLang}, '', `?doc=${resolved}&lang=${currentLang}`);
+        });
+
+        // Event delegation for sidebar navigation
+        document.getElementById('nav-content').addEventListener('click', (e) => {
+            const link = e.target.closest('.doc-link');
+            if (!link) return;
+
+            e.preventDefault();
+            const file = link.dataset.file;
+            if (file) loadDoc(file);
+        });
+
+        // Language switcher
+        document.querySelectorAll('.ctrl-btn[data-lang]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newLang = btn.dataset.lang;
+                if (newLang === currentLang) return;
+
+                const newFile = findCorrespondingFile(currentFile, currentLang, newLang);
+                currentLang = newLang;
+                document.documentElement.lang = newLang;
+
+                document.querySelectorAll('.ctrl-btn[data-lang]').forEach(b => {
+                    b.classList.toggle('active', b.dataset.lang === newLang);
+                });
+
+                renderNav();
+                loadDoc(newFile);
+                localStorage.setItem('docs-lang', newLang);
+            });
+        });
+
+        // Browser back/forward
+        window.addEventListener('popstate', (e) => {
+            if (e.state) {
+                if (e.state.lang !== currentLang) {
+                    currentLang = e.state.lang;
+                    document.documentElement.lang = e.state.lang;
+                    document.querySelectorAll('.ctrl-btn[data-lang]').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.lang === e.state.lang);
+                    });
+                }
+                renderNav();
+                loadDoc(e.state.file);
+            }
+        });
+
+        async function init() {
+            initTheme();
+
+            const savedLang = localStorage.getItem('docs-lang') || 'ru';
+            const params = new URLSearchParams(window.location.search);
+            const urlLang = params.get('lang');
+            const urlFile = params.get('doc');
+
+            currentLang = urlLang || savedLang;
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('.ctrl-btn[data-lang]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === currentLang);
+            });
+
+            await loadTree();
+
+            const rootFiles = docTree.root_files.filter(f => f.lang === currentLang);
+            const firstFile = urlFile || (rootFiles.length > 0 ? rootFiles[0].path : (docTree.root_files[0]?.path || ''));
+
+            if (firstFile) {
+                currentFile = firstFile;
+                loadDoc(firstFile);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

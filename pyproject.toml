@@ -1,0 +1,31 @@
+[tool.importlinter]
+root_package = "src"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "domain-no-infrastructure"
+type = "forbidden"
+source_modules = ["src.domain"]
+forbidden_modules = ["src.infrastructure", "src.api", "src.services"]
+message = "Domain layer cannot import infrastructure, API, or application layers"
+
+[[tool.importlinter.contracts]]
+name = "domain-no-frameworks"
+type = "forbidden"
+source_modules = ["src.domain"]
+forbidden_modules = ["aiofiles", "aiohttp", "httpx", "asyncpg", "telethon", "fastapi"]
+message = "Domain layer cannot import framework or I/O modules"
+
+[[tool.importlinter.contracts]]
+name = "usecase-no-infra"
+type = "forbidden"
+source_modules = ["src.application.usecases"]
+forbidden_modules = ["src.infrastructure", "src.api", "src.services"]
+message = "Use case layer cannot import infrastructure, API, or services"
+
+[[tool.importlinter.contracts]]
+name = "usecase-no-frameworks"
+type = "forbidden"
+source_modules = ["src.application.usecases"]
+forbidden_modules = ["fastapi", "asyncpg", "aiohttp", "telethon", "httpx"]
+message = "Use case layer cannot import framework or I/O modules"
