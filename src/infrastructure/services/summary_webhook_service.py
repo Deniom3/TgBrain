@@ -4,6 +4,7 @@ Webhook Service для отправки summary.
 Асинхронная генерация и отправка webhook.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
