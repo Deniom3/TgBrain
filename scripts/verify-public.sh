@@ -2,11 +2,11 @@
 # ============================================================================
 # verify-public.sh — Проверка публичной ветки на утечку закрытых файлов
 # ============================================================================
-# Проверяет текущую ветку public (или указанную) на наличие запрещённых
+# Проверяет указанную ветку/refs (по умолчанию public) на наличие запрещённых
 # файлов в working tree и в полной истории коммитов.
 #
 # Использование:
-#   bash scripts/verify-public.sh [branch_name]
+#   bash scripts/verify-public.sh [branch_or_ref]
 # ============================================================================
 set -euo pipefail
 
@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_ROOT"
 
-BRANCH="${1:-public}"
+BRANCH_REF="${1:-public}"
 
 # Загружаем список исключаемых файлов из .publish-filter-list
 FILTER_LIST=".publish-filter-list"
@@ -29,11 +29,11 @@ warn() { echo "[verify-public] WARNING: $*" >&2; }
 fail() { echo "[verify-public] FAIL: $*" >&2; }
 ok()   { echo "[verify-public] OK: $*"; }
 
-git rev-parse --verify "$BRANCH" >/dev/null 2>&1 \
-    || { fail "Branch '$BRANCH' does not exist."; exit 1; }
+git rev-parse --verify "$BRANCH_REF" >/dev/null 2>&1 \
+    || { fail "Ref '$BRANCH_REF' does not exist."; exit 1; }
 
-log "Checking branch: $BRANCH"
-log "Total commits: $(git rev-list --count "$BRANCH")"
+log "Checking ref: $BRANCH_REF"
+log "Total commits: $(git rev-list --count "$BRANCH_REF")"
 echo ""
 
 TREE_ERRORS=0
@@ -41,7 +41,7 @@ HISTORY_ERRORS=0
 
 log "--- Checking working tree (HEAD) ---"
 for item in "${FORBIDDEN_FILES[@]}"; do
-    if git ls-tree -r --name-only "$BRANCH" | grep -q "^${item}\|^${item}/"; then
+    if git ls-tree -r --name-only "$BRANCH_REF" | grep -q "^${item}\|^${item}/"; then
         fail "  TREE: $item"
         TREE_ERRORS=$((TREE_ERRORS + 1))
     else
@@ -51,7 +51,7 @@ done
 
 echo ""
 log "--- Checking full history ---"
-HISTORY_FILES=$(git log "$BRANCH" --pretty=format: --name-only | sort -u)
+HISTORY_FILES=$(git log "$BRANCH_REF" --pretty=format: --name-only | sort -u)
 
 for item in "${FORBIDDEN_FILES[@]}"; do
     if echo "$HISTORY_FILES" | grep -q "^${item}$\|^${item}/"; then

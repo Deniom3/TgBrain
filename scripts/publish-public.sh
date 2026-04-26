@@ -2,8 +2,9 @@
 # ============================================================================
 # publish-public.sh — Публикация очищенной версии проекта в публичный GitHub
 # ============================================================================
-# Создаёт временный bare-репозиторий, фильтрует историю через filter-branch
-# (удаляет приватные файлы из ВСЕХ коммитов), пушит на GitHub как main.
+# Создаёт временный bare-репозиторий, фильтрует только origin/main через
+# filter-branch (удаляет приватные файлы из ВСЕХ коммитов этой ветки),
+# пушит очищенную историю в GitHub как main.
 #
 # Использование:
 #   git remote add public <URL_GITHUB_REPO>  # однократно
@@ -16,9 +17,10 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_ROOT"
 
 # ---------- настройка ----------
-PUBLIC_BRANCH="public"
 PUBLIC_REMOTE="public"
 TARGET_BRANCH="main"
+SOURCE_REF="refs/heads/main"
+PUBLIC_REF="refs/heads/public-main"
 TEMP_DIR=$(mktemp -d)
 
 cleanup() { rm -rf "$TEMP_DIR"; }
@@ -56,6 +58,12 @@ log "Creating temporary bare clone..."
 git clone --bare "$REPO_ROOT" "$TEMP_DIR/filter.git"
 cd "$TEMP_DIR/filter.git"
 
+git rev-parse --verify "$SOURCE_REF" >/dev/null 2>&1 \
+    || die "Source ref '$SOURCE_REF' not found in temporary clone"
+
+log "Creating isolated public branch from $SOURCE_REF..."
+git branch -f public-main "$SOURCE_REF"
+
 # Формируем команду rm
 RM_ARGS=""
 for item in "${FORBIDDEN_FILES[@]}"; do
@@ -65,7 +73,7 @@ done
 log "Filtering history with git filter-branch..."
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --index-filter \
     "git rm -rf --cached --ignore-unmatch $RM_ARGS" \
-    --prune-empty -- --all
+    --prune-empty -- "$PUBLIC_REF"
 
 # Удаляем backup refs
 git for-each-ref --format='%(refname)' refs/original/ | while read ref; do
@@ -78,7 +86,7 @@ git gc --prune=now
 log "Verifying no forbidden files in HEAD..."
 FOUND=0
 for item in "${FORBIDDEN_FILES[@]}"; do
-    if git ls-tree -r --name-only HEAD | grep -q "^${item}\|^${item}/"; then
+    if git ls-tree -r --name-only "$PUBLIC_REF" | grep -q "^${item}\|^${item}/"; then
         warn "Forbidden file still present: $item"
         FOUND=1
     fi
@@ -88,7 +96,7 @@ done
 log "Verifying no forbidden files in history..."
 HISTORY_LEAK=0
 for item in "${FORBIDDEN_FILES[@]}"; do
-    if git log --all --pretty=format: --name-only | grep -q "^${item}$\|^${item}/"; then
+    if git log "$PUBLIC_REF" --pretty=format: --name-only | grep -q "^${item}$\|^${item}/"; then
         warn "Forbidden file found in history: $item"
         HISTORY_LEAK=1
     fi
@@ -98,12 +106,12 @@ done
 # ---------- пуш ----------
 log "Pushing cleaned history to $PUBLIC_REMOTE::$TARGET_BRANCH..."
 cd "$TEMP_DIR/filter.git"
-git push --force "$GITHUB_URL" "refs/heads/main:$TARGET_BRANCH"
+git push --force "$GITHUB_URL" "$PUBLIC_REF:refs/heads/$TARGET_BRANCH"
 
 # ---------- итог ----------
 log ""
 log "============================================"
 log "  Published to $PUBLIC_REMOTE::$TARGET_BRANCH"
 log "  History fully rewritten (no private files)"
-log "  Commits: $(git -C "$TEMP_DIR/filter.git" rev-list --count HEAD)"
+log "  Commits: $(git -C "$TEMP_DIR/filter.git" rev-list --count "$PUBLIC_REF")"
 log "============================================"
