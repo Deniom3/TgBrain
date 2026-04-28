@@ -3,7 +3,7 @@ TgBrain — основной пакет приложения.
 """
 
 from .config import settings, get_settings, Settings, SettingsWithProviders
-from .database import get_db, init_db, close_pool
+from .database import get_db, init_db_tables, close_pool
 from .embeddings import EmbeddingsClient, EmbeddingsError
 from .ingestion import TelegramIngester
 from .rag import RAGService
@@ -14,7 +14,7 @@ __all__ = [
     "Settings",
     "SettingsWithProviders",
     "get_db",
-    "init_db",
+    "init_db_tables",
     "close_pool",
     "EmbeddingsClient",
     "EmbeddingsError",

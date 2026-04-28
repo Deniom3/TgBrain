@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, AsyncMock
 import asyncpg
 
 import pytest
-from src.database import init_db, close_pool
+from src.database import init_db_tables, close_pool
 from src.settings.repositories.embedding_providers import EmbeddingProvidersRepository
 
 pytestmark = pytest.mark.skip(reason="Скрипт использует реальную БД — требует мокификации")
@@ -53,7 +53,7 @@ async def test_embedding_providers():
     # Инициализация БД
     print("\n[1] Инициализация БД...")
     try:
-        await init_db()
+        await init_db_tables()
         print("    ✅ Инициализация: OK")
     except Exception as e:
         print(f"    ❌ Инициализация: FAILED - {e}")

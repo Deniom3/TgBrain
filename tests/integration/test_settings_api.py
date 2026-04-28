@@ -5,7 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from main import app
-from src.database import init_db, close_pool
+from src.database import init_db_tables, close_pool
 from src.settings import ChatSettingsRepository
 
 pytestmark = pytest.mark.integration
@@ -23,7 +23,7 @@ def event_loop():
 @pytest.fixture(scope="session", autouse=True)
 async def init_test_db():
     """Инициализировать БД перед всеми тестами."""
-    await init_db()
+    await init_db_tables()
     yield
     await close_pool()
 

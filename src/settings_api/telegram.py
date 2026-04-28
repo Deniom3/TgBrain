@@ -10,6 +10,12 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from src.api.models import ErrorDetail, ErrorResponse
+from src.infrastructure.exceptions import (
+    SessionDecryptionError,
+    SessionNotAuthorizedError,
+    SessionNotConfiguredError,
+)
+from src.infrastructure.telegram_client_factory import TelegramClientFactory
 
 logger = logging.getLogger(__name__)
 
@@ -165,77 +171,35 @@ async def check_telegram_health(request: Request):
         "error": None,
     }
 
+    factory: TelegramClientFactory | None = request.app.state.telegram_client_factory
+    if not factory:
+        result["error"] = "Telegram client factory not available"
+        return result
+
     try:
-        # Получаем репозиторий из app.state
-        telegram_auth_repo = request.app.state.telegram_auth_repo
-        auth = await telegram_auth_repo.get()
-
-        api_id_value: int | None = None
-        if auth.api_id is not None:
-            api_id_value = auth.api_id.value if hasattr(auth.api_id, 'value') else auth.api_id
-
-        api_hash_value: str | None = None
-        if auth.api_hash is not None:
-            api_hash_value = auth.api_hash.value if hasattr(auth.api_hash, 'value') else auth.api_hash
-
-        if not api_id_value or not api_hash_value:
-            result["error"] = "Telegram credentials not configured"
-            return result
-
-        session_name_str: str | None = None
-        if auth.session_name is not None:
-            if hasattr(auth.session_name, 'value'):
-                session_name_str = str(auth.session_name.value)
-            else:
-                session_name_str = str(auth.session_name)
-
-        if not session_name_str:
-            result["error"] = "Session not configured"
-            return result
-
-        if not TelegramAuthRequest.SESSION_NAME_PATTERN.match(session_name_str):
-            logger.warning("Invalid session_name in DB, skipping file check: %s", session_name_str)
-            result["error"] = "Invalid session name"
-            return result
-
-        from telethon import TelegramClient
-
-        session_path = f"sessions/{session_name_str}"
-        session_file = f"{session_path}.session"
-
-        import os
-        session_realpath = os.path.realpath(session_file)
-        sessions_dir_realpath = os.path.realpath("sessions")
-        if not session_realpath.startswith(sessions_dir_realpath + os.sep):
-            logger.warning("Session file path escapes sessions directory: %s", session_realpath)
-            result["error"] = "Invalid session file path"
-            return result
-
-        if not os.path.exists(session_file):
-            result["error"] = "Session file not found"
-            return result
-
-        client = TelegramClient(session_name_str, api_id_value, api_hash_value)
-        await client.connect()
-
-        if await client.is_user_authorized():
+        client, session_path = await factory.create_client()
+        try:
+            await factory.connect_client(client)
             result["is_available"] = True
             result["is_authorized"] = True
-
             me = await client.get_me()
             result["user"] = {
                 "first_name": me.first_name,
                 "last_name": me.last_name,
                 "username": me.username,
-                "is_premium": getattr(me, 'is_premium', False),
+                "is_premium": getattr(me, "is_premium", False),
             }
-        else:
-            result["error"] = "User not authorized"
-
-        await client.disconnect()
-
+        finally:
+            await client.disconnect()
+            factory.cleanup(session_path)
+    except SessionNotConfiguredError:
+        result["error"] = "Сессия Telegram не настроена"
+    except SessionNotAuthorizedError:
+        result["error"] = "Сессия не авторизована"
+    except SessionDecryptionError:
+        result["error"] = "Ошибка расшифровки сессии"
     except Exception as e:
-        logger.error("Check Telegram error: %s", e, exc_info=True)
+        logger.error("Check Telegram error: %s", type(e).__name__)
         result["error"] = "Internal server error"
 
     return result

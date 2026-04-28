@@ -307,6 +307,7 @@ def init_app_state(app: FastAPI) -> None:
     app.state.ask_usecase = None
     app.state.summary_usecase = None
     app.state.import_usecase = None
+    app.state.telegram_client_factory = None
 
 
 def get_app_state() -> IApplicationState | None:

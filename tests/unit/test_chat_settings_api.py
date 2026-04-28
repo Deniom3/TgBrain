@@ -8,7 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from unittest.mock import MagicMock, AsyncMock
 import asyncpg
-from src.database import init_db, close_pool
+from src.database import init_db_tables, close_pool
 from src.settings import ChatSettingsRepository
 
 
@@ -43,7 +43,7 @@ def mock_pool() -> MagicMock:
 @pytest.fixture(scope="module", autouse=True)
 async def setup_database():
     """Инициализация БД перед тестами."""
-    await init_db()
+    await init_db_tables()
     yield
     await close_pool()
 

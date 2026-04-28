@@ -191,13 +191,27 @@ async def get_db() -> AsyncGenerator[asyncpg.Connection, None]:
         yield conn
 
 
-async def init_db() -> None:
-    """
-    Инициализация БД: создание таблиц, индексов, расширения pgvector.
-    """
+async def init_extensions_direct() -> None:
+    """Создать расширения PostgreSQL через прямое подключение (БЕЗ пула)."""
+    settings = _get_settings()
+    conn = await asyncpg.connect(
+        host=settings.db_host,
+        port=settings.db_port,
+        database=settings.db_name,
+        user=settings.db_user,
+        password=settings.db_password,
+    )
+    try:
+        await _init_extensions(conn)
+        logger.info("Расширения PostgreSQL активированы (direct connection)")
+    finally:
+        await conn.close()
+
+
+async def init_db_tables() -> None:
+    """Создание таблиц, индексов (без расширений — они созданы в init_extensions_direct)."""
     async with get_db() as conn:
         async with conn.transaction():
-            await _init_extensions(conn)
             await _create_auth_tables(conn)
             await _create_chat_tables(conn)
             await _create_message_tables(conn)
@@ -207,7 +221,122 @@ async def init_db() -> None:
             await _create_reindex_tables(conn)
             await _create_indices(conn)
 
-        logger.info("Инициализация БД завершена")
+        logger.info("Инициализация таблиц БД завершена")
+
+
+async def migrate_chat_ids() -> dict[str, int]:
+    """
+    Исправить неверные chat_id для каналов/супергрупп.
+
+    Старая формула: -1000000000000 + raw_id (неверная)
+    Новая формула: -1000000000000 - raw_id (верная)
+
+    Returns:
+        Словарь с количеством мигрированных и пропущенных записей.
+    """
+    from src.ingestion.chat_sync_service import normalize_chat_id
+
+    stats: dict[str, int] = {"migrated": 0, "skipped": 0, "errors": 0}
+
+    async with get_db() as conn:
+        rows = await conn.fetch(
+            "SELECT chat_id FROM chat_settings WHERE chat_id <= -1000000000 AND chat_id > -1000000000000"
+        )
+
+        for row in rows:
+            old_chat_id = row["chat_id"]
+            raw_id = old_chat_id + 1000000000000
+
+            if raw_id <= 0:
+                stats["skipped"] += 1
+                continue
+
+            correct_chat_id = normalize_chat_id(raw_id, is_channel=True)
+
+            if old_chat_id == correct_chat_id:
+                stats["skipped"] += 1
+                continue
+
+            try:
+                async with conn.transaction():
+                    affected = await conn.execute(
+                        "UPDATE chat_settings SET chat_id = $1 WHERE chat_id = $2",
+                        correct_chat_id,
+                        old_chat_id,
+                    )
+                    if affected:
+                        stats["migrated"] += 1
+
+                    await conn.execute(
+                        "UPDATE messages SET chat_id = $1 WHERE chat_id = $2",
+                        correct_chat_id,
+                        old_chat_id,
+                    )
+
+                    await conn.execute(
+                        "UPDATE chat_summaries SET chat_id = $1 WHERE chat_id = $2",
+                        correct_chat_id,
+                        old_chat_id,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Ошибка миграции chat_id %s → %s: %s",
+                    old_chat_id,
+                    correct_chat_id,
+                    type(exc).__name__,
+                )
+                stats["errors"] += 1
+
+    if stats["migrated"] > 0:
+        logger.info("Миграция chat_id: %s", stats)
+
+    return stats
+
+
+async def migrate_chat_types() -> dict[str, int]:
+    """
+    Заполнить поле type для существующих чатов.
+
+    Returns:
+        Словарь с количеством обновлённых записей.
+    """
+    stats: dict[str, int] = {"updated": 0, "skipped": 0}
+
+    async with get_db() as conn:
+        rows = await conn.fetch(
+            "SELECT chat_id, type FROM chat_settings WHERE type IS NULL OR type = ''"
+        )
+
+        for row in rows:
+            chat_id = row["chat_id"]
+
+            if chat_id > 0:
+                chat_type = "private"
+            elif chat_id < -1000000000000:
+                chat_type = "channel"
+            elif chat_id < 0:
+                chat_type = "group"
+            else:
+                chat_type = "private"
+
+            try:
+                await conn.execute(
+                    "UPDATE chat_settings SET type = $1 WHERE chat_id = $2",
+                    chat_type,
+                    chat_id,
+                )
+                stats["updated"] += 1
+            except Exception as exc:
+                logger.warning(
+                    "Ошибка обновления type для chat_id=%s: %s",
+                    chat_id,
+                    type(exc).__name__,
+                )
+
+    if stats["updated"] > 0:
+        logger.info("Миграция chat_type: %s", stats)
+
+    return stats
 
 
 async def _init_extensions(conn: asyncpg.Connection) -> None:

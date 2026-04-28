@@ -99,3 +99,24 @@ class FileStorageError(InfrastructureError):
         if self.file_path:
             return f"FileStorageError(path={self.file_path!r}): {self.message}"
         return f"FileStorageError: {self.message}"
+
+
+class SessionNotConfiguredError(InfrastructureError):
+    """Сессия Telegram не настроена (session_data отсутствует)."""
+
+    def __init__(self) -> None:
+        super().__init__("Сессия Telegram не настроена")
+
+
+class SessionNotAuthorizedError(InfrastructureError):
+    """Сессия Telegram не авторизована."""
+
+    def __init__(self) -> None:
+        super().__init__("Сессия Telegram не авторизована")
+
+
+class SessionDecryptionError(InfrastructureError):
+    """Ошибка расшифровки сессии Telegram (APP-108)."""
+
+    def __init__(self) -> None:
+        super().__init__("Ошибка расшифровки сессии Telegram")

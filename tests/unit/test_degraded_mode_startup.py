@@ -67,7 +67,10 @@ def _create_lifecycle_patches(
 
     patches = [
         patch("src.database.get_pool", return_value=db_pool_mock),
-        patch("src.database.init_db", new=AsyncMock()),
+        patch("src.database.init_extensions_direct", new=AsyncMock()),
+        patch("src.database.init_db_tables", new=AsyncMock()),
+        patch("src.database.migrate_chat_ids", new=AsyncMock()),
+        patch("src.database.migrate_chat_types", new=AsyncMock()),
         patch("src.settings_initializer.SettingsInitializer.initialize", new=AsyncMock()),
         patch("src.settings.TelegramAuthRepository", return_value=mock_telegram_auth_repo),
         patch("src.settings.repositories.app_settings.AppSettingsRepository"),

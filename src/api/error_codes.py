@@ -62,6 +62,7 @@ APP_ERROR_CODES: dict[str, ErrorCode] = {
     "APP-105": ErrorCode("APP-105", "Duplicate", 409),
     "APP-106": ErrorCode("APP-106", "Service unavailable", 503),
     "APP-107": ErrorCode("APP-107", "Use case error", 422),
+    "APP-108": ErrorCode("APP-108", "Session decryption error", 500),
 }
 
 # ===== WHK Error Codes =====

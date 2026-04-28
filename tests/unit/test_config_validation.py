@@ -214,7 +214,10 @@ async def test_lifecycle_invalid_credentials_raises_configuration_error() -> Non
 
     with (
         patch("src.database.get_pool", new=AsyncMock()) as mock_pool,
-        patch("src.database.init_db", new=AsyncMock()),
+        patch("src.database.init_extensions_direct", new=AsyncMock()),
+        patch("src.database.init_db_tables", new=AsyncMock()),
+        patch("src.database.migrate_chat_ids", new=AsyncMock()),
+        patch("src.database.migrate_chat_types", new=AsyncMock()),
         patch("src.settings_initializer.SettingsInitializer.initialize", new=AsyncMock()),
         patch("src.config.loader.load_settings_from_db", return_value=settings),
     ):
@@ -252,7 +255,10 @@ async def test_lifecycle_valid_credentials_starts_successfully() -> None:
 
     with (
         patch("src.database.get_pool", new=AsyncMock()) as mock_pool,
-        patch("src.database.init_db", new=AsyncMock()),
+        patch("src.database.init_extensions_direct", new=AsyncMock()),
+        patch("src.database.init_db_tables", new=AsyncMock()),
+        patch("src.database.migrate_chat_ids", new=AsyncMock()),
+        patch("src.database.migrate_chat_types", new=AsyncMock()),
         patch("src.settings_initializer.SettingsInitializer.initialize", new=AsyncMock()),
         patch("src.config.loader.load_settings_from_db", return_value=valid_settings),
         patch("src.config.validate_settings", side_effect=mock_validate_ok),

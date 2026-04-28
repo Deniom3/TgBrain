@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, AsyncMock
 import asyncpg
 
 from src.settings import ChatSettingsRepository
-from src.database import init_db, close_pool
+from src.database import init_db_tables, close_pool
 
 
 pytestmark = pytest.mark.skip(reason="Требует мокификации — использует реальную БД")
@@ -45,7 +45,7 @@ def mock_pool() -> MagicMock:
 @pytest.fixture(scope="module", autouse=True)
 async def setup_database():
     """Инициализация БД перед тестами."""
-    await init_db()
+    await init_db_tables()
     yield
     await close_pool()
 

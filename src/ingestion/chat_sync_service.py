@@ -16,35 +16,30 @@ from ..settings import ChatSettingsRepository
 logger = logging.getLogger(__name__)
 
 
-def normalize_chat_id(entity_id: int, is_channel: bool) -> int:
+def normalize_chat_id(raw_id: int, is_channel: bool = True) -> int:
     """
-    Нормализация ID чата.
-    
-    В Telegram:
-    - Личные чаты: положительный ID (123456789)
-    - Группы: отрицательный ID (-123456789)  
-    - Каналы/супергруппы: -100XXXXXXXXX
-    
+    Нормализация ID чата для каналов/супергрупп.
+
+    В Telegram каналы и супергруппы используют формат -100XXXXXXXXX.
+    Telethon возвращает положительный entity.id для каналов.
+
     Args:
-        entity_id: ID сущности из Telegram API
+        raw_id: ID сущности из Telegram API
         is_channel: True если это канал/супергруппа
-    
+
     Returns:
         Нормализованный ID для хранения в БД
+
+    Raises:
+        ValueError: Если raw_id равен 0
     """
-    # Для каналов и супергрупп добавляем -100 если нужно
-    if is_channel:
-        # Каналы всегда должны иметь префикс -100
-        if entity_id > 0:
-            return -1000000000000 + entity_id
-        elif str(entity_id).startswith('-100'):
-            return entity_id  # Уже с префиксом
-        else:
-            # Отрицательный но без -100
-            return -1000000000000 + abs(entity_id)
-    
-    # Для групп и личных чатов возвращаем как есть
-    return entity_id
+    if raw_id == 0:
+        raise ValueError("raw_id не может быть 0")
+    if not is_channel:
+        return raw_id
+    if raw_id < -1000000000000:
+        return raw_id
+    return -1000000000000 - abs(raw_id)
 
 
 class ChatSyncService:
@@ -141,16 +136,7 @@ class ChatSyncService:
                     is_channel = isinstance(entity, Channel)
                     raw_id = entity.id
                     
-                    # Для каналов добавляем префикс -100 если его нет
-                    if is_channel:
-                        if raw_id > 0:
-                            chat_id = -1000000000000 + raw_id
-                        elif not str(raw_id).startswith('-100'):
-                            chat_id = -1000000000000 + abs(raw_id)
-                        else:
-                            chat_id = raw_id  # Уже с префиксом -100
-                    else:
-                        chat_id = raw_id  # Для групп оставляем как есть
+                    chat_id = normalize_chat_id(raw_id, is_channel=is_channel)
                     
                     title = str(getattr(entity, 'title', None) or getattr(entity, 'username', f'Chat {chat_id}'))
                     chat_type = self._get_chat_type(entity)
@@ -237,8 +223,9 @@ class ChatSyncService:
             chats_to_save.append({
                 "chat_id": chat_id,
                 "title": dialog["title"],
+                "type": dialog["type"],
                 "is_monitored": is_monitored,
-                "is_enabled": summary_enabled,
+                "summary_enabled": summary_enabled,
             })
         
         # Массовое сохранение в БД
@@ -335,15 +322,7 @@ class ChatSyncService:
                 is_channel = isinstance(entity, Channel)
                 raw_id = entity.id
                 
-                if is_channel:
-                    if raw_id > 0:
-                        chat_id = -1000000000000 + raw_id
-                    elif not str(raw_id).startswith('-100'):
-                        chat_id = -1000000000000 + abs(raw_id)
-                    else:
-                        chat_id = raw_id
-                else:
-                    chat_id = raw_id
+                chat_id = normalize_chat_id(raw_id, is_channel=is_channel)
                 
                 return {
                     "chat_id": chat_id,

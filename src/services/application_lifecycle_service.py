@@ -65,9 +65,12 @@ class ApplicationLifecycleService:
         
         # 1. Инициализация БД
         logger.info("Инициализация базы данных...")
-        from src.database import get_pool, init_db
+        from src.database import get_pool, init_extensions_direct, init_db_tables, migrate_chat_ids, migrate_chat_types
+        await init_extensions_direct()
         state["db_pool"] = await get_pool()
-        await init_db()
+        await init_db_tables()
+        await migrate_chat_ids()
+        await migrate_chat_types()
         logger.info("✅ БД инициализирована")
         
         # 2. Создание репозиториев настроек
@@ -119,6 +122,21 @@ class ApplicationLifecycleService:
         except ConfigurationError as exc:
             logger.warning("Telegram not configured: %s. Application running in degraded mode.", exc.code)
             state["telegram_configured"] = False
+        
+        # 5.1 Создание TelegramClientFactory
+        try:
+            from src.settings import EncryptionService
+            from src.infrastructure.telegram_client_factory import TelegramClientFactory
+
+            encryption_service = await EncryptionService.create(app_settings_repo)
+            telegram_client_factory = TelegramClientFactory(
+                telegram_auth_repo, settings, encryption_service,
+            )
+            state["telegram_client_factory"] = telegram_client_factory
+            logger.info("TelegramClientFactory создан")
+        except Exception as e:
+            logger.warning("Не удалось создать TelegramClientFactory: %s", type(e).__name__)
+            state["telegram_client_factory"] = None
         
         # 6. Создание клиентов
         logger.info("Инициализация Embeddings клиента...")
@@ -241,16 +259,7 @@ class ApplicationLifecycleService:
         # 15. Инициализация Telegram Ingester (только если credentials настроены)
         if state["telegram_configured"]:
             logger.info("Инициализация Telegram Ingester...")
-            from src.ingestion import TelegramIngester
-            state["ingester"] = TelegramIngester(
-                settings,
-                state["embeddings"],
-                telegram_auth_repo,
-                app_settings_repo,
-                state["rate_limiter"]
-            )
-            state["ingester"].start()
-            logger.info("✅ Telegram Ingester инициализирован и запущен")
+            await self._init_ingester(state, settings, telegram_auth_repo, app_settings_repo)
         else:
             logger.info("Telegram Ingester skipped — credentials not configured")
             state["ingester"] = None
@@ -277,7 +286,47 @@ class ApplicationLifecycleService:
             logger.warning("QR AuthService не инициализирован — Telegram credentials не настроены")
 
         return state
-    
+
+    async def _init_ingester(
+        self,
+        state: Dict[str, Any],
+        settings: "Settings",
+        telegram_auth_repo: Any,
+        app_settings_repo: Any,
+    ) -> None:
+        """Инициализировать Telegram Ingester с обработкой ошибок запуска.
+
+        Создаёт экземпляр TelegramIngester, вызывает start() с await,
+        проверяет флаг _running и обрабатывает исключения.
+
+        Args:
+            state: Словарь состояния приложения (будет обновлён).
+            settings: Настройки приложения.
+            telegram_auth_repo: Репозиторий Telegram авторизации.
+            app_settings_repo: Репозиторий настроек приложения.
+        """
+        from src.ingestion import TelegramIngester
+
+        state["ingester"] = TelegramIngester(
+            settings,
+            state["embeddings"],
+            telegram_auth_repo,
+            app_settings_repo,
+            state["rate_limiter"],
+        )
+        try:
+            await state["ingester"].start()
+            if state["ingester"]._running:
+                logger.info("✅ Telegram Ingester запущен (awaited)")
+            else:
+                logger.warning(
+                    "Telegram Ingester не запустился — возможны проблемы с сессией"
+                )
+                state["ingester"] = None
+        except Exception as e:
+            logger.warning("Ошибка при запуске Ingester: %s", type(e).__name__)
+            state["ingester"] = None
+
     async def cleanup(self, state: Dict[str, Any]) -> None:
         """
         Очистить все компоненты приложения.
