@@ -248,6 +248,7 @@ async def _create_message_tables(conn: asyncpg.Connection) -> None:
             embedding VECTOR(1024),
             embedding_model TEXT,
             is_processed BOOLEAN DEFAULT FALSE,
+            is_bot BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
     """)
@@ -258,6 +259,38 @@ async def _create_message_tables(conn: asyncpg.Connection) -> None:
         ADD COLUMN IF NOT EXISTS embedding_model TEXT
     """)
     logger.info("Колонка embedding_model добавлена (миграция)")
+
+    await conn.execute("""
+        ALTER TABLE chat_settings
+        ADD COLUMN IF NOT EXISTS filter_bots BOOLEAN DEFAULT TRUE
+    """)
+    await conn.execute("""
+        ALTER TABLE chat_settings
+        ADD COLUMN IF NOT EXISTS filter_actions BOOLEAN DEFAULT TRUE
+    """)
+    await conn.execute("""
+        ALTER TABLE chat_settings
+        ADD COLUMN IF NOT EXISTS filter_min_length INTEGER DEFAULT 15
+    """)
+    await conn.execute("""
+        ALTER TABLE chat_settings
+        ADD COLUMN IF NOT EXISTS filter_ads BOOLEAN DEFAULT TRUE
+    """)
+    await conn.execute("""
+        ALTER TABLE messages
+        ADD COLUMN IF NOT EXISTS is_bot BOOLEAN DEFAULT FALSE
+    """)
+    logger.info("Колонки filter_* и is_bot добавлены (миграция)")
+
+    await conn.execute("""
+        DO $$ BEGIN
+            ALTER TABLE chat_settings
+            ADD CONSTRAINT chk_filter_min_length CHECK (filter_min_length >= 0);
+        EXCEPTION
+            WHEN duplicate_object THEN NULL;
+        END $$
+    """)
+    logger.info("CHECK констрейнт chk_filter_min_length добавлен (миграция)")
 
     await conn.execute("""
         CREATE TABLE IF NOT EXISTS pending_messages (

@@ -108,7 +108,13 @@ class TestExternalSaverChatCreation:
 
         def fetchrow_handler(query: str, args: tuple) -> dict | None:
             if "is_monitored" in query:
-                return {"is_monitored": True}
+                return {
+                    "is_monitored": True,
+                    "filter_bots": True,
+                    "filter_actions": True,
+                    "filter_min_length": 15,
+                    "filter_ads": True,
+                }
             if "INSERT INTO messages" in query or "ON CONFLICT" in query and "messages" in query:
                 message_id_counter[0] += 1
                 return {"id": message_id_counter[0]}
@@ -132,7 +138,13 @@ class TestExternalSaverChatCreation:
         """Сообщение для существующего чата с is_monitored=FALSE отклоняется (EXT-002)."""
         conn = MockConnection()
         conn.set_fetchrow_handler(
-            lambda query, args: {"is_monitored": False}
+            lambda query, args: {
+                "is_monitored": False,
+                "filter_bots": True,
+                "filter_actions": True,
+                "filter_min_length": 15,
+                "filter_ads": True,
+            }
             if "is_monitored" in query
             else None
         )
@@ -161,7 +173,13 @@ class TestExternalSaverChatCreation:
                 fetchrow_call_count[0] += 1
                 if fetchrow_call_count[0] == 1:
                     return None
-                return {"is_monitored": True}
+                return {
+                    "is_monitored": True,
+                    "filter_bots": True,
+                    "filter_actions": True,
+                    "filter_min_length": 15,
+                    "filter_ads": True,
+                }
             if "INSERT INTO messages" in query or "ON CONFLICT" in query and "messages" in query:
                 message_id_counter[0] += 1
                 return {"id": message_id_counter[0]}

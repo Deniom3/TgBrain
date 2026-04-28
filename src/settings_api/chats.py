@@ -27,6 +27,10 @@ class ChatSettingRequest(BaseModel):
     is_monitored: bool = Field(default=True)
     summary_enabled: bool = Field(default=True)
     custom_prompt: str | None = Field(default=None)
+    filter_bots: bool = Field(default=True)
+    filter_actions: bool = Field(default=True)
+    filter_min_length: int = Field(default=15, ge=0)
+    filter_ads: bool = Field(default=True)
 
 
 class ChatSettingResponse(BaseModel):
@@ -37,6 +41,10 @@ class ChatSettingResponse(BaseModel):
     is_monitored: bool
     summary_enabled: bool
     custom_prompt: str | None
+    filter_bots: bool
+    filter_actions: bool
+    filter_min_length: int
+    filter_ads: bool
     created_at: str | None
     updated_at: str | None
 
@@ -52,6 +60,21 @@ class ChatListResponse(BaseModel):
     """Расширенный ответ со списком чатов."""
     chats: List[ChatSettingResponse]
     meta: ChatListMeta
+
+
+class ChatFilterBulkRequest(BaseModel):
+    """Запрос на массовое обновление фильтров."""
+    filter_bots: bool = Field(default=True)
+    filter_actions: bool = Field(default=True)
+    filter_min_length: int = Field(default=15, ge=0)
+    filter_ads: bool = Field(default=True)
+
+
+class ChatFilterBulkResponse(BaseModel):
+    """Ответ на массовое обновление фильтров."""
+    status: str
+    updated_count: int
+    filters: dict
 
 
 # ==================== Endpoints ====================
@@ -80,6 +103,10 @@ async def get_all_chat_settings():
             is_monitored=s.is_monitored,
             summary_enabled=s.summary_enabled,
             custom_prompt=s.custom_prompt,
+            filter_bots=s.filter_bots,
+            filter_actions=s.filter_actions,
+            filter_min_length=s.filter_min_length,
+            filter_ads=s.filter_ads,
             created_at=s.created_at.isoformat() if s.created_at else None,
             updated_at=s.updated_at.isoformat() if s.updated_at else None,
         )
@@ -113,6 +140,10 @@ async def get_all_chat_settings_with_meta():
                 is_monitored=s.is_monitored,
                 summary_enabled=s.summary_enabled,
                 custom_prompt=s.custom_prompt,
+                filter_bots=s.filter_bots,
+                filter_actions=s.filter_actions,
+                filter_min_length=s.filter_min_length,
+                filter_ads=s.filter_ads,
                 created_at=s.created_at.isoformat() if s.created_at else None,
                 updated_at=s.updated_at.isoformat() if s.updated_at else None,
             )
@@ -150,6 +181,10 @@ async def get_monitored_chat_settings():
             is_monitored=s.is_monitored,
             summary_enabled=s.summary_enabled,
             custom_prompt=s.custom_prompt,
+            filter_bots=s.filter_bots,
+            filter_actions=s.filter_actions,
+            filter_min_length=s.filter_min_length,
+            filter_ads=s.filter_ads,
             created_at=s.created_at.isoformat() if s.created_at else None,
             updated_at=s.updated_at.isoformat() if s.updated_at else None,
         )
@@ -188,6 +223,10 @@ async def get_chat_setting(chat_id: int):
         is_monitored=setting.is_monitored,
         summary_enabled=setting.summary_enabled,
         custom_prompt=setting.custom_prompt,
+        filter_bots=setting.filter_bots,
+        filter_actions=setting.filter_actions,
+        filter_min_length=setting.filter_min_length,
+        filter_ads=setting.filter_ads,
         created_at=setting.created_at.isoformat() if setting.created_at else None,
         updated_at=setting.updated_at.isoformat() if setting.updated_at else None,
     )
@@ -211,6 +250,10 @@ async def update_chat_setting(request: Request, chat_id: int, request_data: Chat
         is_monitored=request_data.is_monitored,
         summary_enabled=request_data.summary_enabled,
         custom_prompt=request_data.custom_prompt,
+        filter_bots=request_data.filter_bots,
+        filter_actions=request_data.filter_actions,
+        filter_min_length=request_data.filter_min_length,
+        filter_ads=request_data.filter_ads,
     )
 
     if not setting:
@@ -235,8 +278,63 @@ async def update_chat_setting(request: Request, chat_id: int, request_data: Chat
         is_monitored=setting.is_monitored,
         summary_enabled=setting.summary_enabled,
         custom_prompt=setting.custom_prompt,
+        filter_bots=setting.filter_bots,
+        filter_actions=setting.filter_actions,
+        filter_min_length=setting.filter_min_length,
+        filter_ads=setting.filter_ads,
         created_at=setting.created_at.isoformat() if setting.created_at else None,
         updated_at=setting.updated_at.isoformat() if setting.updated_at else None,
+    )
+
+
+@router.put("/chats/bulk/filter", response_model=ChatFilterBulkResponse)
+async def bulk_update_chat_filters(request: Request, filters: ChatFilterBulkRequest):
+    """Массовое обновление фильтров для monitored чатов."""
+    app_state = request.app.state
+    if not app_state.db_pool:
+        raise HTTPException(
+            status_code=503,
+            detail=ErrorResponse(
+                error=ErrorDetail(code="APP-106", message="Database not available")
+            ).model_dump(),
+        )
+
+    repo = ChatSettingsRepository(app_state.db_pool)
+    monitored_chats = await repo.get_monitored_chat_ids()
+    updated_count = 0
+
+    for chat_id in monitored_chats:
+        setting = await repo.update(
+            chat_id=chat_id,
+            filter_bots=filters.filter_bots,
+            filter_actions=filters.filter_actions,
+            filter_min_length=filters.filter_min_length,
+            filter_ads=filters.filter_ads,
+        )
+        if setting:
+            updated_count += 1
+
+    if hasattr(app_state, "ingester") and app_state.ingester:
+        await app_state.ingester.reload_monitored_chats()
+
+    logger.info(
+        "Bulk filter update: %d chats updated with bots=%s actions=%s min_length=%d ads=%s",
+        updated_count,
+        filters.filter_bots,
+        filters.filter_actions,
+        filters.filter_min_length,
+        filters.filter_ads,
+    )
+
+    return ChatFilterBulkResponse(
+        status="success",
+        updated_count=updated_count,
+        filters={
+            "filter_bots": filters.filter_bots,
+            "filter_actions": filters.filter_actions,
+            "filter_min_length": filters.filter_min_length,
+            "filter_ads": filters.filter_ads,
+        },
     )
 
 

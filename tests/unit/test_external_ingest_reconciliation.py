@@ -65,7 +65,7 @@ class TestReconciliation:
         # Первое сообщение
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
             {"id": 11111},
         ])
@@ -86,7 +86,7 @@ class TestReconciliation:
         # Второе сообщение (позже)
         mock_conn2 = AsyncMock()
         mock_conn2.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
             {"id": 22222},
         ])
@@ -112,7 +112,7 @@ class TestReconciliation:
         # Первое сообщение
         mock_conn1 = AsyncMock()
         mock_conn1.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
             {"id": 11111},
         ])
@@ -129,7 +129,7 @@ class TestReconciliation:
         # Второе сообщение
         mock_conn2 = AsyncMock()
         mock_conn2.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
             {"id": 22222},
         ])
@@ -155,7 +155,7 @@ class TestReconciliation:
 
         # Первое сообщение (текст должен быть >= 15 символов для прохождения фильтра)
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
             {"id": 12345},
         ])
@@ -175,7 +175,7 @@ class TestReconciliation:
         # Обновление с тем же ID но новым текстом (в пределах 60 секунд)
         mock_conn2 = AsyncMock()
         mock_conn2.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             {"id": 12345, "message_text": "Старый текст сообщения для теста"},
         ])
         mock_conn2.execute = AsyncMock()
@@ -205,7 +205,7 @@ class TestReconciliation:
                 captured_embeddings.append(args[2])
 
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             {"id": 12345, "message_text": "Старый текст"},
         ])
         mock_conn.execute = capture_execute
@@ -236,7 +236,7 @@ class TestReconciliation:
                 pending_data["last_error"] = args[1]
 
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
         ])
         mock_conn.execute = capture_execute
@@ -273,7 +273,7 @@ class TestReconciliation:
                 pending_data["last_error"] = args[1]
 
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
         ])
 
@@ -318,7 +318,7 @@ class TestReconciliation:
                 pending_data["retry_count"] = 0
 
         mock_conn.fetchrow = AsyncMock(side_effect=[
-            {"is_monitored": True},
+            {"is_monitored": True, "filter_bots": True, "filter_actions": True, "filter_min_length": 15, "filter_ads": True},
             None,
         ])
         mock_conn.execute = capture_execute

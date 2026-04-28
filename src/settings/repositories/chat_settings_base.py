@@ -39,6 +39,10 @@ class ChatSettingsBaseRepository:
         is_monitored: bool = True,
         summary_enabled: bool = True,
         custom_prompt: Optional[str] = None,
+        filter_bots: bool = True,
+        filter_actions: bool = True,
+        filter_min_length: int = 15,
+        filter_ads: bool = True,
     ) -> Optional[ChatSetting]:
         """
         Сохранить или обновить настройки чата.
@@ -49,6 +53,10 @@ class ChatSettingsBaseRepository:
             is_monitored: Мониторить ли чат
             summary_enabled: Включена ли сводка
             custom_prompt: Кастомный промпт
+            filter_bots: Фильтровать сообщения ботов
+            filter_actions: Фильтровать служебные действия
+            filter_min_length: Минимальная длина сообщения
+            filter_ads: Фильтровать рекламные сообщения
 
         Returns:
             Сохранённые настройки или None.
@@ -58,6 +66,7 @@ class ChatSettingsBaseRepository:
                 row = await conn.fetchrow(
                     SQL_INSERT_CHAT_SETTING,
                     chat_id, title, is_monitored, summary_enabled, custom_prompt,
+                    filter_bots, filter_actions, filter_min_length, filter_ads,
                 )
                 if row:
                     return ChatSetting(**dict(row))
@@ -107,6 +116,10 @@ class ChatSettingsBaseRepository:
         is_monitored: Optional[bool] = None,
         summary_enabled: Optional[bool] = None,
         custom_prompt: Optional[str] = None,
+        filter_bots: Optional[bool] = None,
+        filter_actions: Optional[bool] = None,
+        filter_min_length: Optional[int] = None,
+        filter_ads: Optional[bool] = None,
     ) -> Optional[ChatSetting]:
         """
         Частично обновить настройки чата. None = пропустить поле.
@@ -116,6 +129,10 @@ class ChatSettingsBaseRepository:
             is_monitored: Мониторить ли чат
             summary_enabled: Включена ли сводка
             custom_prompt: Кастомный промпт
+            filter_bots: Фильтровать сообщения ботов
+            filter_actions: Фильтровать служебные действия
+            filter_min_length: Минимальная длина сообщения
+            filter_ads: Фильтровать рекламные сообщения
 
         Returns:
             Обновлённые настройки или None.
@@ -141,6 +158,22 @@ class ChatSettingsBaseRepository:
                 if custom_prompt is not None:
                     set_clauses.append(f"custom_prompt = ${param_index}")
                     values.append(custom_prompt)
+                    param_index += 1
+                if filter_bots is not None:
+                    set_clauses.append(f"filter_bots = ${param_index}")
+                    values.append(filter_bots)
+                    param_index += 1
+                if filter_actions is not None:
+                    set_clauses.append(f"filter_actions = ${param_index}")
+                    values.append(filter_actions)
+                    param_index += 1
+                if filter_min_length is not None:
+                    set_clauses.append(f"filter_min_length = ${param_index}")
+                    values.append(filter_min_length)
+                    param_index += 1
+                if filter_ads is not None:
+                    set_clauses.append(f"filter_ads = ${param_index}")
+                    values.append(filter_ads)
                     param_index += 1
 
                 if not set_clauses:

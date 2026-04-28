@@ -9,6 +9,7 @@ from typing import Optional, Protocol, runtime_checkable
 import asyncpg
 
 from ..config import Settings
+from ..domain.models.chat_filter_config import ChatFilterConfig
 from ..embeddings import EmbeddingsClient
 from .filters import should_process_message
 from .models import IngestionMessage
@@ -49,7 +50,8 @@ class MessageSaver:
     async def save_message(
         self,
         message: IngestionMessage,
-        embedding: Optional[list[float]] = None
+        embedding: Optional[list[float]] = None,
+        chat_config: Optional[ChatFilterConfig] = None,
     ) -> bool:
         """
         Сохранение сообщения в БД.
@@ -57,16 +59,27 @@ class MessageSaver:
         Args:
             message: Сообщение для сохранения.
             embedding: Вектор эмбеддинга (опционально).
+            chat_config: Конфигурация фильтров чата (опционально).
 
         Returns:
             True если успешно.
         """
-        # Проверка на фильтрацию
-        should_process, reason = should_process_message(
-            message.text,
-            message.is_bot,
-            message.is_action
-        )
+        if chat_config:
+            should_process, reason = should_process_message(
+                message.text,
+                message.is_bot,
+                message.is_action,
+                filter_bots=chat_config.filter_bots,
+                filter_actions=chat_config.filter_actions,
+                filter_min_length=chat_config.filter_min_length,
+                filter_ads=chat_config.filter_ads,
+            )
+        else:
+            should_process, reason = should_process_message(
+                message.text,
+                message.is_bot,
+                message.is_action,
+            )
 
         if not should_process:
             logger.debug("Сообщение %s отфильтровано: %s", message.id, reason)
@@ -101,8 +114,8 @@ class MessageSaver:
         """Сохранение в таблицу messages."""
         # Создаём запись в chat_settings (если нет)
         await self.pool.execute("""
-            INSERT INTO chat_settings (chat_id, title, type, last_message_id, is_monitored, summary_enabled)
-            VALUES ($1, $2, $3, 0, TRUE, TRUE)
+            INSERT INTO chat_settings (chat_id, title, type, last_message_id, is_monitored, summary_enabled, filter_bots, filter_actions, filter_min_length, filter_ads)
+            VALUES ($1, $2, $3, 0, TRUE, TRUE, TRUE, TRUE, 15, TRUE)
             ON CONFLICT (chat_id) DO UPDATE SET
                 title = EXCLUDED.title,
                 type = EXCLUDED.type,
@@ -114,13 +127,14 @@ class MessageSaver:
         await self.pool.execute("""
             INSERT INTO messages (
                 id, chat_id, sender_id, sender_name, message_text,
-                message_date, message_link, embedding, embedding_model, is_processed
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::VECTOR, $9, $10)
+                message_date, message_link, embedding, embedding_model, is_processed, is_bot
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::VECTOR, $9, $10, $11)
             ON CONFLICT (id) DO UPDATE SET
                 embedding = EXCLUDED.embedding,
                 embedding_model = EXCLUDED.embedding_model,
                 is_processed = EXCLUDED.is_processed,
-                sender_name = EXCLUDED.sender_name
+                sender_name = EXCLUDED.sender_name,
+                is_bot = EXCLUDED.is_bot
         """,
             message.id,
             message.chat_id,
@@ -131,7 +145,8 @@ class MessageSaver:
             message.message_link,
             embedding,
             embedding_model,
-            True
+            True,
+            message.is_bot,
         )
 
         logger.debug("Сообщение %s сохранено в БД", message.id)

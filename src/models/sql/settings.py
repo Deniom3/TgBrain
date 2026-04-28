@@ -7,13 +7,17 @@ CRUD операции для таблиц chat_settings, app_settings.
 # ==================== Chat Settings ====================
 
 SQL_INSERT_CHAT_SETTING = """
-INSERT INTO chat_settings (chat_id, title, is_monitored, summary_enabled, custom_prompt)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO chat_settings (chat_id, title, is_monitored, summary_enabled, custom_prompt, filter_bots, filter_actions, filter_min_length, filter_ads)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (chat_id) DO UPDATE SET
     title = EXCLUDED.title,
     is_monitored = EXCLUDED.is_monitored,
     summary_enabled = EXCLUDED.summary_enabled,
     custom_prompt = EXCLUDED.custom_prompt,
+    filter_bots = EXCLUDED.filter_bots,
+    filter_actions = EXCLUDED.filter_actions,
+    filter_min_length = EXCLUDED.filter_min_length,
+    filter_ads = EXCLUDED.filter_ads,
     updated_at = NOW()
 RETURNING *
 """
@@ -28,7 +32,9 @@ SELECT * FROM chat_settings ORDER BY chat_id
 
 SQL_UPDATE_CHAT_SETTING = """
 UPDATE chat_settings
-SET is_monitored = $2, summary_enabled = $3, custom_prompt = $4, updated_at = NOW()
+SET is_monitored = $2, summary_enabled = $3, custom_prompt = $4,
+    filter_bots = $5, filter_actions = $6, filter_min_length = $7, filter_ads = $8,
+    updated_at = NOW()
 WHERE chat_id = $1
 RETURNING *
 """

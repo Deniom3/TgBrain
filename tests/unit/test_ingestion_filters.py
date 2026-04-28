@@ -170,3 +170,116 @@ class TestShouldProcessMessage:
             is_action=False,
         )
         assert result == (True, "")
+
+    def test_bot_allowed_filter_bots_false(self):
+        """
+        Бот пропускается, если filter_bots=False.
+
+        Проверяет:
+        - is_bot=True, filter_bots=False → (True, "")
+        """
+        should, reason = should_process_message(
+            "this is a normal length message", is_bot=True, is_action=False,
+            filter_bots=False,
+        )
+        assert should is True
+        assert reason == ""
+
+    def test_action_allowed_filter_actions_false(self):
+        """
+        Action пропускается, если filter_actions=False.
+
+        Проверяет:
+        - is_action=True, filter_actions=False → (True, "")
+        """
+        should, reason = should_process_message(
+            "this is a normal length message", is_bot=False, is_action=True,
+            filter_actions=False,
+        )
+        assert should is True
+        assert reason == ""
+
+    def test_length_zero_disables_filter(self):
+        """
+        filter_min_length=0 отключает фильтр длины.
+
+        Проверяет:
+        - Короткий текст при filter_min_length=0 → (True, "")
+        """
+        should, reason = should_process_message(
+            "hi", is_bot=False, is_action=False,
+            filter_min_length=0,
+        )
+        assert should is True
+        assert reason == ""
+
+    def test_length_custom_min(self):
+        """
+        Произвольное значение filter_min_length отклоняет короткий текст.
+
+        Проверяет:
+        - Текст короче filter_min_length → (False, "short ...")
+        """
+        should, reason = should_process_message(
+            "hi", is_bot=False, is_action=False,
+            filter_min_length=5,
+        )
+        assert should is False
+        assert "short" in reason
+
+    def test_ads_disabled_filter_ads_false(self):
+        """
+        Рекламный текст пропускается, если filter_ads=False.
+
+        Проверяет:
+        - Реклама при filter_ads=False → (True, "")
+        """
+        should, reason = should_process_message(
+            "реклама подписывайтесь на канал", is_bot=False, is_action=False,
+            filter_ads=False,
+        )
+        assert should is True
+        assert reason == ""
+
+    def test_bot_allowed_action_still_filtered(self):
+        """
+        Бот пропущен (filter_bots=False), но action отклонён (filter_actions=True).
+
+        Проверяет:
+        - is_bot=True, is_action=True, filter_bots=False, filter_actions=True → (False, "action")
+        """
+        should, reason = should_process_message(
+            "test", is_bot=True, is_action=True,
+            filter_bots=False, filter_actions=True,
+        )
+        assert should is False
+        assert reason == "action"
+
+    def test_bot_allowed_short_filtered(self):
+        """
+        Бот пропущен (filter_bots=False), но короткий текст отклонён.
+
+        Проверяет:
+        - is_bot=True, filter_bots=False, короткий текст → (False, "short ...")
+        """
+        should, reason = should_process_message(
+            "", is_bot=True, is_action=False,
+            filter_bots=False, filter_min_length=15,
+        )
+        assert should is False
+        assert "short" in reason
+
+    def test_all_filters_disabled(self):
+        """
+        Все фильтры отключены — любое сообщение пропускается.
+
+        Проверяет:
+        - Бот + action + реклама + короткий текст, все фильтры=False → (True, "")
+        """
+        should, reason = should_process_message(
+            "реклама", is_bot=True, is_action=True,
+            filter_bots=False, filter_actions=False,
+            filter_min_length=0, filter_ads=False,
+        )
+        assert should is True
+        assert reason == ""

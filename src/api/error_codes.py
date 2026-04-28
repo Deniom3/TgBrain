@@ -54,6 +54,7 @@ APP_ERROR_CODES: dict[str, ErrorCode] = {
     "APP-001": ErrorCode("APP-001", "Invalid timezone", 400),
     "APP-002": ErrorCode("APP-002", "Setting not found", 404),
     "APP-003": ErrorCode("APP-003", "Failed to save setting", 500),
+    "APP-008": ErrorCode("APP-008", "Invalid filter configuration", 422),
     "APP-101": ErrorCode("APP-101", "Internal server error", 500),
     "APP-102": ErrorCode("APP-102", "Validation error", 400),
     "APP-103": ErrorCode("APP-103", "Not found", 404),

@@ -146,7 +146,13 @@ class TestAPIEndpoint:
 
         async def mock_fetchrow(query, *args):
             if "is_monitored" in query:
-                return {"is_monitored": True}
+                return {
+                    "is_monitored": True,
+                    "filter_bots": True,
+                    "filter_actions": True,
+                    "filter_min_length": 15,
+                    "filter_ads": True,
+                }
             elif "INSERT INTO messages" in query:
                 raise Exception("Database connection error")
             return None
@@ -195,7 +201,13 @@ class TestAPIEndpoint:
 
         async def mock_fetchrow(query, *args):
             if "is_monitored" in query:
-                return {"is_monitored": True}
+                return {
+                    "is_monitored": True,
+                    "filter_bots": True,
+                    "filter_actions": True,
+                    "filter_min_length": 15,
+                    "filter_ads": True,
+                }
             elif "message_text_hash" in query or "text" in query:
                 return {"id": 999, "message_text": "Дубликат для теста"}
             return None

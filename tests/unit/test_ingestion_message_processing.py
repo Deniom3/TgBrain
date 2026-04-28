@@ -129,12 +129,18 @@ class TestInitializeMonitoredChats:
         Проверяет:
         - Заполнение _monitored_chats_cache
         - Загрузка last_message_id для каждого чата
+        - Загрузка _chat_filter_config
         """
         with patch("src.ingestion.message_processing.get_pool", new_callable=AsyncMock) as mock_get_pool:
             mock_get_pool.return_value = mock_pool
             mock_pool.fetchrow = AsyncMock(return_value={"last_message_id": 50})
 
-            await message_processor.initialize_monitored_chats([-1001234567890])
+            mock_repo = AsyncMock()
+            mock_repo.get_chat_filter_configs = AsyncMock(return_value={})
+            mock_pool.fetchrow = AsyncMock(return_value={"last_message_id": 50})
+
+            with patch("src.ingestion.message_processing.ChatSettingsRepository", return_value=mock_repo):
+                await message_processor.initialize_monitored_chats([-1001234567890])
 
             assert -1001234567890 in message_processor._monitored_chats_cache
             assert message_processor._last_message_ids[-1001234567890] == 50
@@ -390,6 +396,7 @@ class TestReloadMonitoredChats:
 
             mock_repo = AsyncMock()
             mock_repo.get_monitored_chat_ids = AsyncMock(return_value=[-1001234567890, -1009876543210])
+            mock_repo.get_chat_filter_configs = AsyncMock(return_value={})
             mock_pool.fetchrow = AsyncMock(return_value={"last_message_id": 0})
 
             with patch("src.ingestion.message_processing.ChatSettingsRepository", return_value=mock_repo):

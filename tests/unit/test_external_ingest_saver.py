@@ -47,9 +47,15 @@ class TestExternalMessageSaver:
 
         async def mock_fetchrow(query, *args):
             if "is_monitored" in query:
-                return {"is_monitored": True}
+                return {
+                    "is_monitored": True,
+                    "filter_bots": True,
+                    "filter_actions": True,
+                    "filter_min_length": 15,
+                    "filter_ads": True,
+                }
             elif "SELECT id, message_text" in query:
-                return None  # Нет дубликата
+                return None
             elif "INSERT INTO messages" in query:
                 return {"id": 12345}
             return None
@@ -90,9 +96,15 @@ class TestExternalMessageSaver:
 
     @pytest.mark.asyncio
     async def test_EnsureChatMonitored_True(self, external_saver, mock_pool):
-        """Проверка мониторинга чата — True."""
+        """Проверка мониторинга чата — возвращает ChatFilterConfig."""
         mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value={"is_monitored": True})
+        mock_conn.fetchrow = AsyncMock(return_value={
+            "is_monitored": True,
+            "filter_bots": True,
+            "filter_actions": True,
+            "filter_min_length": 15,
+            "filter_ads": True,
+        })
         mock_conn.execute = AsyncMock()
 
         async def mock_acquire():
@@ -100,14 +112,23 @@ class TestExternalMessageSaver:
 
         mock_pool.acquire = mock_acquire
 
+        from src.domain.models.chat_filter_config import ChatFilterConfig
+
         result = await external_saver._ensure_chat_monitored(mock_conn, -1001234567890)
-        assert result is True
+        assert isinstance(result, ChatFilterConfig)
+        assert result.filter_bots is True
 
     @pytest.mark.asyncio
     async def test_EnsureChatMonitored_False(self, external_saver, mock_pool):
-        """Проверка мониторинга чата — False."""
+        """Проверка мониторинга чата — None при is_monitored=False."""
         mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value={"is_monitored": False})
+        mock_conn.fetchrow = AsyncMock(return_value={
+            "is_monitored": False,
+            "filter_bots": True,
+            "filter_actions": True,
+            "filter_min_length": 15,
+            "filter_ads": True,
+        })
         mock_conn.execute = AsyncMock()
 
         async def mock_acquire():
@@ -116,11 +137,11 @@ class TestExternalMessageSaver:
         mock_pool.acquire = mock_acquire
 
         result = await external_saver._ensure_chat_monitored(mock_conn, -1001234567890)
-        assert result is False
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_EnsureChatMonitored_NotFound_CreatesChat(self, external_saver, mock_pool):
-        """Чат не найден — автоматически создаётся с is_monitored=TRUE."""
+        """Чат не найден — автоматически создаётся, возвращает ChatFilterConfig с defaults."""
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
         mock_conn.execute = AsyncMock()
@@ -130,8 +151,10 @@ class TestExternalMessageSaver:
 
         mock_pool.acquire = mock_acquire
 
+        from src.domain.models.chat_filter_config import ChatFilterConfig
+
         result = await external_saver._ensure_chat_monitored(mock_conn, -1001234567890)
-        assert result is True
+        assert isinstance(result, ChatFilterConfig)
         mock_conn.execute.assert_called_once()
 
     @pytest.mark.asyncio

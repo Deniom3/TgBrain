@@ -11,6 +11,7 @@ from telethon.tl.types import Message as TLMessage
 
 from ..config import Settings
 from ..database import get_pool
+from ..domain.models.chat_filter_config import ChatFilterConfig
 from ..rate_limiter import TelegramRateLimiter, RequestPriority
 from ..settings import ChatSettingsRepository
 from .models import IngestionMessage
@@ -39,12 +40,16 @@ class MessageProcessor:
         self._last_message_ids_lock = asyncio.Lock()
         self._monitored_chats_cache: set[int] = set()
         self._monitored_chats_cache_lock = asyncio.Lock()
+        self._chat_filter_config: dict[int, ChatFilterConfig] = {}
         self._cache_refresh_counter = 0
         self._cache_refresh_interval = 6
 
     async def initialize_monitored_chats(self, monitored_chats: list[int]) -> None:
         async with self._monitored_chats_cache_lock:
             self._monitored_chats_cache = set(monitored_chats)
+            pool = await get_pool()
+            repo = ChatSettingsRepository(pool)
+            self._chat_filter_config = await repo.get_chat_filter_configs()
 
         for chat_id in monitored_chats:
             try:
@@ -73,7 +78,8 @@ class MessageProcessor:
             return
 
         logger.info(f"Обработка сообщения {message.id} из {message.chat_title}...")
-        success = await self.saver.save_message(message)
+        chat_config = self._chat_filter_config.get(message.chat_id)
+        success = await self.saver.save_message(message, chat_config=chat_config)
         if success:
             self._processed_count += 1
             await self.saver.update_chat_progress(
@@ -161,6 +167,7 @@ class MessageProcessor:
             current_monitored = await repo.get_monitored_chat_ids()
             async with self._monitored_chats_cache_lock:
                 self._monitored_chats_cache = set(current_monitored)
+                self._chat_filter_config = await repo.get_chat_filter_configs()
         else:
             async with self._monitored_chats_cache_lock:
                 current_monitored = list(self._monitored_chats_cache)
@@ -207,7 +214,7 @@ class MessageProcessor:
         current_monitored = await repo.get_monitored_chat_ids()
         async with self._monitored_chats_cache_lock:
             self._monitored_chats_cache = set(current_monitored)
-
+            self._chat_filter_config = await repo.get_chat_filter_configs()
         added, removed = 0, 0
         for chat_id in current_monitored:
             async with self._last_message_ids_lock:

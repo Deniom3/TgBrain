@@ -17,9 +17,11 @@ from urllib.parse import parse_qsl, urlparse, urlunparse
 
 import asyncpg
 
+from ...domain.models.chat_filter_config import ChatFilterConfig
 from ...models.data_models import ChatSetting, JsonValue, WebhookConfig
 from ...models.sql import (
     SQL_DISABLE_WEBHOOK,
+    SQL_GET_CHAT_FILTER_CONFIGS,
     SQL_GET_WEBHOOK_CONFIG,
     SQL_SET_WEBHOOK_CONFIG,
 )
@@ -578,3 +580,17 @@ class ChatSettingsRepository(ChatSettingsBaseRepository, ChatSettingsBulkReposit
     async def get_enabled_summary_chat_ids(self) -> List[int]:
         """Получить ID чатов с включённой генерацией summary."""
         return await self._get_summary_repo().get_enabled_summary_chat_ids()
+
+    async def get_chat_filter_configs(self) -> dict[int, ChatFilterConfig]:
+        """Получить конфигурации фильтров для всех мониторимых чатов."""
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(SQL_GET_CHAT_FILTER_CONFIGS)
+            return {
+                row["chat_id"]: ChatFilterConfig(
+                    filter_bots=row["filter_bots"],
+                    filter_actions=row["filter_actions"],
+                    filter_min_length=row["filter_min_length"],
+                    filter_ads=row["filter_ads"],
+                )
+                for row in rows
+            }

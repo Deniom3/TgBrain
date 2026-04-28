@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from src.api.error_codes import APP_ERROR_CODES
@@ -27,6 +28,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         app: Экземпляр FastAPI приложения.
     """
     app.add_exception_handler(Exception, global_exception_handler)
+    app.add_exception_handler(RequestValidationError, request_validation_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(ValidationError, validation_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(NotFoundError, not_found_handler)  # type: ignore[arg-type]
     app.add_exception_handler(BusinessRuleError, business_rule_error_handler)  # type: ignore[arg-type]
@@ -43,6 +45,27 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         content=ErrorResponse(
             error=ErrorDetail(code=ec.code, message=ec.message),
         ).model_dump(),
+    )
+
+
+async def request_validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    for error in exc.errors():
+        loc = error.get("loc", ())
+        if any("filter_min_length" in str(part) for part in loc):
+            ec = APP_ERROR_CODES["APP-008"]
+            logger.info("Filter validation error: %s", error.get("msg", ""))
+            return JSONResponse(
+                status_code=ec.http_status,
+                content=ErrorResponse(
+                    error=ErrorDetail(code=ec.code, message=ec.message),
+                ).model_dump(),
+            )
+    logger.info("Request validation error: %s", exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
     )
 
 

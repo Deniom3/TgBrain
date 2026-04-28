@@ -5,6 +5,7 @@
 """
 
 from .auth import TelegramAuth
+from .chat_filter_config import ChatFilterConfig
 from .message import IngestionMessage, MessageId
 
-__all__ = ["TelegramAuth", "IngestionMessage", "MessageId"]
+__all__ = ["TelegramAuth", "ChatFilterConfig", "IngestionMessage", "MessageId"]

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS messages (
     embedding VECTOR(1024),
     embedding_model TEXT,
     is_processed BOOLEAN DEFAULT FALSE,
+    is_bot BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 )
 """
@@ -76,6 +77,10 @@ CREATE TABLE IF NOT EXISTS chat_settings (
     custom_prompt TEXT,
     webhook_config JSONB,
     webhook_enabled BOOLEAN DEFAULT FALSE,
+    filter_bots BOOLEAN DEFAULT TRUE,
+    filter_actions BOOLEAN DEFAULT TRUE,
+    filter_min_length INTEGER DEFAULT 15 CHECK (filter_min_length >= 0),
+    filter_ads BOOLEAN DEFAULT TRUE,
     next_schedule_run TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

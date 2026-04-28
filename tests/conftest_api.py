@@ -40,7 +40,13 @@ def _create_mock_connection() -> MagicMock:
 
     async def mock_fetchrow(query: str, *args: object) -> dict | None:
         if "is_monitored" in query:
-            return {"is_monitored": True}
+            return {
+                "is_monitored": True,
+                "filter_bots": True,
+                "filter_actions": True,
+                "filter_min_length": 15,
+                "filter_ads": True,
+            }
         return None
 
     async def mock_execute(*args: object, **kwargs: object) -> None:

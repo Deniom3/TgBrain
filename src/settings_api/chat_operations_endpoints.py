@@ -35,6 +35,10 @@ class ChatBulkUpdateRequest(BaseModel):
     is_monitored: Optional[bool] = Field(default=None)
     summary_enabled: Optional[bool] = Field(default=None)
     custom_prompt: Optional[str] = Field(default=None)
+    filter_bots: Optional[bool] = Field(default=None)
+    filter_actions: Optional[bool] = Field(default=None)
+    filter_min_length: Optional[int] = Field(default=None, ge=0)
+    filter_ads: Optional[bool] = Field(default=None)
 
 
 class ChatBulkUpdateResponse(BaseModel):
@@ -228,21 +232,24 @@ async def bulk_update_chat_settings(request: ChatBulkUpdateRequest):
             is_monitored=request.is_monitored,
             summary_enabled=request.summary_enabled,
             custom_prompt=request.custom_prompt,
+            filter_bots=request.filter_bots,
+            filter_actions=request.filter_actions,
+            filter_min_length=request.filter_min_length,
+            filter_ads=request.filter_ads,
         )
         if setting:
             updated_count += 1
 
     logger.info(f"Массовое обновление: обновлено {updated_count} из {len(request.chat_ids)} чатов")
 
-    if request.is_monitored is not None:
-        try:
-            from ..app import get_app_state
-            app_state = get_app_state()
-            if app_state and hasattr(app_state, 'ingester') and app_state.ingester:
-                await app_state.ingester.reload_monitored_chats()
-                logger.info("Ingester уведомлён об обновлении monitored чатов")
-        except Exception as e:
-            logger.warning(f"Не удалось уведомить Ingester: {e}")
+    try:
+        from ..app import get_app_state
+        app_state = get_app_state()
+        if app_state and hasattr(app_state, 'ingester') and app_state.ingester:
+            await app_state.ingester.reload_monitored_chats()
+            logger.info("Ingester уведомлён об обновлении monitored чатов")
+    except Exception as e:
+        logger.warning(f"Не удалось уведомить Ingester: {e}")
 
     return ChatBulkUpdateResponse(
         updated_count=updated_count,

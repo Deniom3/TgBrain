@@ -9,20 +9,21 @@ CRUD операции для таблицы messages.
 SQL_INSERT_MESSAGE = """
 INSERT INTO messages (
     id, chat_id, sender_id, sender_name, message_text,
-    message_date, message_link, embedding, embedding_model, is_processed
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    message_date, message_link, embedding, embedding_model, is_processed, is_bot
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO NOTHING
 """
 
 SQL_INSERT_MESSAGE_WITH_EMBEDDING = """
 INSERT INTO messages (
     id, chat_id, sender_id, sender_name, message_text,
-    message_date, message_link, embedding, embedding_model, is_processed
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::VECTOR, $9, $10)
+    message_date, message_link, embedding, embedding_model, is_processed, is_bot
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::VECTOR, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE SET
     embedding = EXCLUDED.embedding,
     embedding_model = EXCLUDED.embedding_model,
-    is_processed = EXCLUDED.is_processed
+    is_processed = EXCLUDED.is_processed,
+    is_bot = EXCLUDED.is_bot
 """
 
 SQL_GET_UNPROCESSED_MESSAGES = """

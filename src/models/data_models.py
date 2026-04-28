@@ -93,6 +93,7 @@ class Message:
     embedding: Optional[list[float]] = None
     embedding_model: Optional[str] = None
     is_processed: bool = False
+    is_bot: bool = False
     created_at: Optional[datetime] = None
 
 
@@ -121,6 +122,10 @@ class ChatSetting:
     custom_prompt: Optional[str] = None
     webhook_config: Optional[WebhookConfig] = None  # Конфигурация webhook (url, method, headers, body_template)
     webhook_enabled: bool = False
+    filter_bots: bool = True
+    filter_actions: bool = True
+    filter_min_length: int = 15
+    filter_ads: bool = True
     next_schedule_run: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

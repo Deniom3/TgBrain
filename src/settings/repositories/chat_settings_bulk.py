@@ -51,6 +51,10 @@ class ChatSettingsBulkRepository:
                 - last_message_id: int (по умолчанию 0)
                 - is_monitored: bool (по умолчанию True)
                 - summary_enabled: bool (по умолчанию True)
+                - filter_bots: bool (по умолчанию True)
+                - filter_actions: bool (по умолчанию True)
+                - filter_min_length: int (по умолчанию 15)
+                - filter_ads: bool (по умолчанию True)
 
         Returns:
             Список сохранённых настроек.
@@ -60,13 +64,16 @@ class ChatSettingsBulkRepository:
                 if not chats:
                     return []
 
-                # Подготавливаем массивы для UNNEST
                 chat_ids = [c["chat_id"] for c in chats]
                 titles = [c.get("title", "") for c in chats]
                 types = [c.get("type", "private") for c in chats]
                 last_message_ids = [c.get("last_message_id", 0) for c in chats]
                 is_monitored_list = [c.get("is_monitored", True) for c in chats]
                 summary_enabled_list = [c.get("summary_enabled", True) for c in chats]
+                filter_bots_list = [c.get("filter_bots", True) for c in chats]
+                filter_actions_list = [c.get("filter_actions", True) for c in chats]
+                filter_min_length_list = [c.get("filter_min_length", 15) for c in chats]
+                filter_ads_list = [c.get("filter_ads", True) for c in chats]
 
                 rows = await conn.fetch(
                     SQL_BULK_UPSERT_CHAT_SETTINGS,
@@ -76,6 +83,10 @@ class ChatSettingsBulkRepository:
                     last_message_ids,
                     is_monitored_list,
                     summary_enabled_list,
+                    filter_bots_list,
+                    filter_actions_list,
+                    filter_min_length_list,
+                    filter_ads_list,
                 )
                 return [ChatSetting(**dict(row)) for row in rows]
             except Exception as e:
@@ -272,6 +283,10 @@ class ChatSettingsBulkRepository:
         is_monitored: bool = True,
         summary_enabled: bool = True,
         custom_prompt: Optional[str] = None,
+        filter_bots: bool = True,
+        filter_actions: bool = True,
+        filter_min_length: int = 15,
+        filter_ads: bool = True,
     ) -> Optional[ChatSetting]:
         """
         Сохранить или обновить настройки одного чата (альтернативный метод).
@@ -282,6 +297,10 @@ class ChatSettingsBulkRepository:
             is_monitored: Мониторить ли чат
             summary_enabled: Включена ли сводка
             custom_prompt: Кастомный промпт
+            filter_bots: Фильтровать сообщения ботов
+            filter_actions: Фильтровать служебные действия
+            filter_min_length: Минимальная длина сообщения
+            filter_ads: Фильтровать рекламные сообщения
 
         Returns:
             Сохранённые настройки или None.
@@ -290,7 +309,9 @@ class ChatSettingsBulkRepository:
             try:
                 row = await conn.fetchrow(
                     SQL_INSERT_CHAT_SETTING_SINGLE,
-                    chat_id, title, is_monitored, summary_enabled, custom_prompt,
+                    chat_id, title, "private", is_monitored, summary_enabled,
+                    custom_prompt, filter_bots, filter_actions,
+                    filter_min_length, filter_ads,
                 )
                 if row:
                     return ChatSetting(**dict(row))

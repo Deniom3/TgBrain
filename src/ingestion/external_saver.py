@@ -14,6 +14,7 @@ from typing import Optional
 
 import asyncpg
 
+from ..domain.models.chat_filter_config import ChatFilterConfig
 from ..models.sql.external_messages import (
     SQL_CHECK_CHAT_MONITORED,
     SQL_CHECK_DUPLICATE,
@@ -119,8 +120,8 @@ class ExternalMessageSaver:
 
         async with self.pool.acquire() as conn:
             # 1. Проверка мониторинга чата
-            is_monitored = await self._ensure_chat_monitored(conn, chat_id)
-            if not is_monitored:
+            chat_config = await self._ensure_chat_monitored(conn, chat_id)
+            if chat_config is None:
                 logger.warning(
                     "External message rejected: chat_id=%d not monitored",
                     chat_id,
@@ -204,7 +205,13 @@ class ExternalMessageSaver:
                 )
 
             # 3. Фильтрация
-            should_process, reason = should_process_message(text, is_bot, is_action)
+            should_process, reason = should_process_message(
+                text, is_bot, is_action,
+                filter_bots=chat_config.filter_bots,
+                filter_actions=chat_config.filter_actions,
+                filter_min_length=chat_config.filter_min_length,
+                filter_ads=chat_config.filter_ads,
+            )
             if not should_process:
                 logger.debug(
                     "External message filtered: chat_id=%d, reason=%s",
@@ -285,6 +292,7 @@ class ExternalMessageSaver:
                     sender_name,
                     message_link,
                     embedding,
+                    is_bot=is_bot,
                 )
                 logger.info(
                     "External message processed: chat_id=%d, message_id=%d",
@@ -352,27 +360,34 @@ class ExternalMessageSaver:
         self,
         conn: asyncpg.Connection,
         chat_id: int,
-    ) -> bool:
+    ) -> Optional[ChatFilterConfig]:
         """
         Проверка мониторинга чата с авто-созданием при отсутствии.
 
-        Если чат найден и is_monitored=TRUE — разрешает обработку.
-        Если чат найден и is_monitored=FALSE — отклоняет.
-        Если чат не найден — создаёт запись с is_monitored=TRUE.
+        Если чат найден и is_monitored=TRUE — возвращает ChatFilterConfig.
+        Если чат найден и is_monitored=FALSE — возвращает None.
+        Если чат не найден — создаёт запись с is_monitored=TRUE, возвращает ChatFilterConfig с defaults.
 
         Args:
             conn: Соединение с БД.
             chat_id: ID чата.
 
         Returns:
-            True если чат мониторится (существует или создан).
+            ChatFilterConfig если чат мониторится, None если нет.
         """
         row = await conn.fetchrow(
             SQL_CHECK_CHAT_MONITORED,
             chat_id,
         )
         if row is not None:
-            return bool(row["is_monitored"])
+            if not row["is_monitored"]:
+                return None
+            return ChatFilterConfig(
+                filter_bots=row["filter_bots"],
+                filter_actions=row["filter_actions"],
+                filter_min_length=row["filter_min_length"],
+                filter_ads=row["filter_ads"],
+            )
 
         logger.info(
             "External chat not found in settings, auto-creating: chat_id=%d",
@@ -384,7 +399,7 @@ class ExternalMessageSaver:
             f"{self.EXTERNAL_CHAT_TITLE_PREFIX} {chat_id}",
             self.EXTERNAL_CHAT_TYPE,
         )
-        return True
+        return ChatFilterConfig()
 
     async def _check_duplicate(
         self,
@@ -433,6 +448,7 @@ class ExternalMessageSaver:
         sender_name: Optional[str],
         message_link: Optional[str],
         embedding: list[float],
+        is_bot: bool = False,
     ) -> int:
         """
         Сохранение в БД.
@@ -468,6 +484,7 @@ class ExternalMessageSaver:
             embedding,
             embedding_model,
             True,
+            is_bot,
         )
 
         return row["id"]
